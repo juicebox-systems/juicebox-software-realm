@@ -31,9 +31,9 @@ func (sr *SecretsResponse) MarshalCBOR() ([]byte, error) {
 		m = map[string]interface{}{name: map[string]interface{}{string(sr.Status): sr.Payload}}
 	}
 
-	data, err := cbor.Marshal(m)
-	if err != nil {
-		return nil, err
+	data, error := cbor.Marshal(m)
+	if error != nil {
+		return nil, error
 	}
 
 	return data, nil

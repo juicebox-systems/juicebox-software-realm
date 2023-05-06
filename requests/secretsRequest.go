@@ -1,6 +1,8 @@
 package requests
 
-import "github.com/fxamacker/cbor/v2"
+import (
+	"github.com/fxamacker/cbor/v2"
+)
 
 type SecretsRequest struct {
 	Payload interface{}
@@ -8,9 +10,9 @@ type SecretsRequest struct {
 
 func (sr *SecretsRequest) UnmarshalCBOR(data []byte) error {
 	var m interface{}
-	err := cbor.Unmarshal(data, &m)
-	if err != nil {
-		return err
+	error := cbor.Unmarshal(data, &m)
+	if error != nil {
+		return error
 	}
 
 	switch t := m.(type) {
@@ -25,32 +27,32 @@ func (sr *SecretsRequest) UnmarshalCBOR(data []byte) error {
 		}
 
 	case map[interface{}]interface{}:
-		for k, v := range t {
-			cborData, err := cbor.Marshal(v)
-			if err != nil {
-				return err
+		for key, value := range t {
+			cborData, error := cbor.Marshal(value)
+			if error != nil {
+				return error
 			}
 
-			switch k {
+			switch key {
 			case "Register2":
 				var register2 Register2
-				err = cbor.Unmarshal(cborData, &register2)
-				if err != nil {
-					return err
+				error = cbor.Unmarshal(cborData, &register2)
+				if error != nil {
+					return error
 				}
 				sr.Payload = register2
 			case "Recover2":
 				var recover2 Recover2
-				err = cbor.Unmarshal(cborData, &recover2)
-				if err != nil {
-					return err
+				error = cbor.Unmarshal(cborData, &recover2)
+				if error != nil {
+					return error
 				}
 				sr.Payload = recover2
 			case "Recover3":
 				var recover3 Recover3
-				err = cbor.Unmarshal(cborData, &recover3)
-				if err != nil {
-					return err
+				error = cbor.Unmarshal(cborData, &recover3)
+				if error != nil {
+					return error
 				}
 				sr.Payload = recover3
 			}

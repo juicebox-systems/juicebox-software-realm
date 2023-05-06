@@ -18,7 +18,7 @@ type Register2 struct {
 type Recover1 struct{}
 
 type Recover2 struct {
-	BlindedPin types.OprfBlindedInput `cbor:"blinded_pin"`
+	BlindedOprfInput types.OprfBlindedInput `cbor:"blinded_oprf_input"`
 }
 
 type Recover3 struct {
