@@ -54,7 +54,7 @@ func NewSecretsManager(provider types.ProviderName) (SecretsManager, error) {
 	case types.Memory:
 		return MemorySecretsManager{}, nil
 	case types.AWS:
-		return nil, errors.New("aws not yet supported")
+		return NewAwsSecretsManager()
 	}
 	return nil, fmt.Errorf("Unexpected provider %v", provider)
 }

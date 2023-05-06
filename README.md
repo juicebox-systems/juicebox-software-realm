@@ -24,10 +24,11 @@ Usage of jb-sw-realm:
         Some providers take additional configuration via environment variables.
 
         gcp:
-                BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
-                GCP_PROJECT_ID = The id of your project in GCP
+            BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
+            GCP_PROJECT_ID       = The id of your project in GCP
         aws:
-                RDS_TABLE_NAME = The name of your RDS table in AWS
+            RDS_TABLE_NAME  = The name of your RDS table in AWS
+            AWS_REGION_NAME = The name of the region your AWS instance is in
         memory:
                 none
 ```

@@ -1,7 +1,6 @@
 package records
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -20,7 +19,7 @@ func NewRecordStore(provider types.ProviderName, realmId uuid.UUID) (RecordStore
 	case types.Memory:
 		return MemoryRecordStore{}, nil
 	case types.AWS:
-		return nil, errors.New("aws not yet supported")
+		return MemoryRecordStore{}, nil
 	}
 	return nil, fmt.Errorf("Unexpected provider %v", provider)
 }

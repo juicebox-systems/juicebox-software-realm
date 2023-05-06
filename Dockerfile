@@ -13,4 +13,4 @@ RUN CGO_ENABLED=0 go build -o /jb-sw-realm
 
 EXPOSE 443
 
-CMD /jb-sw-realm -id ${REALM_ID} -provider ${PROVIDER} -port 443
+CMD /jb-sw-realm -id ${REALM_ID} -provider ${PROVIDER} -port 443 ${DISABLE_TLS:+-disable-tls}
