@@ -27,8 +27,10 @@ Usage of jb-sw-realm:
             BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
             GCP_PROJECT_ID       = The id of your project in GCP
         aws:
-            RDS_TABLE_NAME  = The name of your RDS table in AWS
-            AWS_REGION_NAME = The name of the region your AWS instance is in
+            AWS_REGION_NAME      = The name of the region your AWS instance is in
+
+            Note: AWS uses DynamoDB and assumes you have a table created with a name
+                  matching your realm id and a partitionKey named recordId.
         memory:
                 none
 ```
