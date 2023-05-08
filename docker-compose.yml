@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  jb-sw-realm:
+    build: .
+    restart: always
+    ports:
+      - "443:443"
+    environment:
+      REALM_ID: f6fa9265-c07e-4614-9474-898e370dd33e
+      PROVIDER: memory
+      DISABLE_TLS:
+      BIGTABLE_INSTANCE_ID:
+      GCP_PROJECT_ID:
+      AWS_REGION_NAME:
