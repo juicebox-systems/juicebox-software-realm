@@ -9,6 +9,7 @@ type ProviderName string
 const (
 	GCP    ProviderName = "gcp"
 	AWS    ProviderName = "aws"
+	Mongo  ProviderName = "mongo"
 	Memory ProviderName = "memory"
 )
 

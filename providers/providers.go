@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/records"
@@ -16,11 +17,13 @@ type Provider struct {
 }
 
 func Parse(nameString string) (types.ProviderName, error) {
-	switch nameString {
+	switch strings.ToLower(nameString) {
 	case "gcp":
 		return types.GCP, nil
 	case "aws":
 		return types.AWS, nil
+	case "mongo":
+		return types.Mongo, nil
 	case "memory":
 		return types.Memory, nil
 	default:
@@ -33,7 +36,7 @@ func NewProvider(name types.ProviderName, realmId uuid.UUID) (*Provider, error) 
 
 	fmt.Print("Connecting to secrets manager...")
 
-	secretsManager, error := secrets.NewSecretsManager(name)
+	secretsManager, error := secrets.NewSecretsManager(name, realmId)
 	if error != nil {
 		fmt.Printf("\rFailed to connect to secrets manager: %s.\n", error)
 		return nil, error

@@ -12,3 +12,4 @@ services:
       BIGTABLE_INSTANCE_ID:
       GCP_PROJECT_ID:
       AWS_REGION_NAME:
+      MONGO_URL:

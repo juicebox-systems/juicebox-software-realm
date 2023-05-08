@@ -20,6 +20,8 @@ func NewRecordStore(provider types.ProviderName, realmId uuid.UUID) (RecordStore
 		return MemoryRecordStore{}, nil
 	case types.AWS:
 		return NewDynamoDbRecordStore(realmId)
+	case types.Mongo:
+		return NewMongoRecordStore(realmId)
 	}
 	return nil, fmt.Errorf("Unexpected provider %v", provider)
 }

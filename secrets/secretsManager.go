@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/types"
 )
 
@@ -47,7 +48,7 @@ func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 	return &tenantSecretsKey, &version, nil
 }
 
-func NewSecretsManager(provider types.ProviderName) (SecretsManager, error) {
+func NewSecretsManager(provider types.ProviderName, realmId uuid.UUID) (SecretsManager, error) {
 	switch provider {
 	case types.GCP:
 		return NewGcpSecretsManager()
@@ -55,6 +56,8 @@ func NewSecretsManager(provider types.ProviderName) (SecretsManager, error) {
 		return MemorySecretsManager{}, nil
 	case types.AWS:
 		return NewAwsSecretsManager()
+	case types.Mongo:
+		return NewMongoSecretsManager(realmId)
 	}
 	return nil, fmt.Errorf("Unexpected provider %v", provider)
 }

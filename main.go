@@ -33,7 +33,7 @@ Note: Changing this id for an existing realm will result in data loss.`,
 	providerString := flag.String(
 		"provider",
 		"",
-		`The provider to use. [gcs|aws|memory] (default "memory")
+		`The provider to use. [gcs|aws|mongo|memory] (default "memory")
 
 Some providers take additional configuration via environment variables.
 
@@ -45,8 +45,13 @@ aws:
 
 	Note: AWS uses DynamoDB and assumes you have a table created with a name
 		  matching your realm id and a partitionKey named recordId.
-memory:
-	none`,
+mongo:
+	MONGO_URL = The url to acess your MongoDB instance in the form of:
+			    mongodb://username:password@host:port/database
+
+
+	Note: User records are stored in a collection named "userRecords".
+	Tenant signing keys are stored in a collection named "tenantSecrets".`,
 	)
 
 	flag.Parse()

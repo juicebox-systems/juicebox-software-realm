@@ -19,20 +19,24 @@ Usage of jb-sw-realm:
   -port int
         The port to run the server on. (default 443)
   -provider string
-        The provider to use. [gcs|aws|memory] (default "memory")
+        The provider to use. [gcs|aws|mongo|memory] (default "memory")
 
         Some providers take additional configuration via environment variables.
 
         gcp:
-            BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
-            GCP_PROJECT_ID       = The id of your project in GCP
+                BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
+                GCP_PROJECT_ID       = The id of your project in GCP
         aws:
-            AWS_REGION_NAME      = The name of the region your AWS instance is in
+                AWS_REGION_NAME      = The name of the region your AWS instance is in
 
-            Note: AWS uses DynamoDB and assumes you have a table created with a name
-                  matching your realm id and a partitionKey named recordId.
-        memory:
-                none
+                Note: AWS uses DynamoDB and assumes you have a table created with a name
+                      matching your realm id and a partitionKey named recordId.
+        mongo:
+                MONGO_URL = The url to acess your MongoDB instance in the form of:
+                            mongodb://username:password@host:port/database_name
+
+                Note: User records are stored in a collection named "userRecords".
+	            Tenant signing keys are stored in a collection named "tenantSecrets".
 ```
 
 Compile the Juicebox Software Realm with `go build -o jb-sw-realm` or compile and run with `go run main.go`.
