@@ -10,9 +10,9 @@ type SecretsRequest struct {
 
 func (sr *SecretsRequest) UnmarshalCBOR(data []byte) error {
 	var m interface{}
-	error := cbor.Unmarshal(data, &m)
-	if error != nil {
-		return error
+	err := cbor.Unmarshal(data, &m)
+	if err != nil {
+		return err
 	}
 
 	switch t := m.(type) {
@@ -28,31 +28,31 @@ func (sr *SecretsRequest) UnmarshalCBOR(data []byte) error {
 
 	case map[interface{}]interface{}:
 		for key, value := range t {
-			cborData, error := cbor.Marshal(value)
-			if error != nil {
-				return error
+			cborData, err := cbor.Marshal(value)
+			if err != nil {
+				return err
 			}
 
 			switch key {
 			case "Register2":
 				var register2 Register2
-				error = cbor.Unmarshal(cborData, &register2)
-				if error != nil {
-					return error
+				err = cbor.Unmarshal(cborData, &register2)
+				if err != nil {
+					return err
 				}
 				sr.Payload = register2
 			case "Recover2":
 				var recover2 Recover2
-				error = cbor.Unmarshal(cborData, &recover2)
-				if error != nil {
-					return error
+				err = cbor.Unmarshal(cborData, &recover2)
+				if err != nil {
+					return err
 				}
 				sr.Payload = recover2
 			case "Recover3":
 				var recover3 Recover3
-				error = cbor.Unmarshal(cborData, &recover3)
-				if error != nil {
-					return error
+				err = cbor.Unmarshal(cborData, &recover3)
+				if err != nil {
+					return err
 				}
 				sr.Payload = recover3
 			}

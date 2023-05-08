@@ -20,7 +20,7 @@ We recommend using a UUID, but any 16-byte hex string is valid.
 
 Note: Changing this id for an existing realm will result in data loss.`,
 	)
-	disableTls := flag.Bool(
+	disableTLS := flag.Bool(
 		"disable-tls",
 		false,
 		"Set this flag to insecurely run the server without TLS.",
@@ -44,7 +44,7 @@ aws:
 	AWS_REGION_NAME 	 = The name of the region your AWS instance is in
 
 	Note: AWS uses DynamoDB and assumes you have a table created with a name
-		  matching your realm id and a partitionKey named recordId.
+		  matching your realm id and a partitionKey named recordID.
 mongo:
 	MONGO_URL = The url to acess your MongoDB instance in the form of:
 			    mongodb://username:password@host:port/database
@@ -56,37 +56,37 @@ mongo:
 
 	flag.Parse()
 
-	var realmId uuid.UUID
+	var realmID uuid.UUID
 
 	if *idString == "" {
-		randomId, error := uuid.NewRandom()
-		if error != nil {
-			fmt.Printf("%s, exiting...\n", error)
+		randomID, err := uuid.NewRandom()
+		if err != nil {
+			fmt.Printf("%s, exiting...\n", err)
 		}
-		realmId = randomId
+		realmID = randomID
 	} else {
-		parsedId, error := uuid.Parse(*idString)
-		if error != nil {
-			fmt.Printf("\n%s, exiting...\n", error)
+		parsedID, err := uuid.Parse(*idString)
+		if err != nil {
+			fmt.Printf("\n%s, exiting...\n", err)
 			return
 		}
-		realmId = parsedId
+		realmID = parsedID
 	}
 
-	providerName, error := providers.Parse(*providerString)
-	if error != nil {
+	providerName, err := providers.Parse(*providerString)
+	if err != nil {
 		if *providerString == "" {
 			providerName = types.Memory
 		} else {
-			fmt.Printf("\n%v, exiting...\n", error)
+			fmt.Printf("\n%v, exiting...\n", err)
 		}
 	}
 
-	provider, error := providers.NewProvider(providerName, realmId)
-	if error != nil {
-		fmt.Printf("\n%s, exiting...\n", error)
+	provider, err := providers.NewProvider(providerName, realmID)
+	if err != nil {
+		fmt.Printf("\n%s, exiting...\n", err)
 		return
 	}
 
-	router.NewRouter(realmId, provider, *disableTls, *port)
+	router.NewRouter(realmID, provider, *disableTLS, *port)
 }

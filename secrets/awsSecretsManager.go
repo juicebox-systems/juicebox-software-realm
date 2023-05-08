@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type AwsSecretsManager struct {
@@ -21,11 +21,11 @@ func NewAwsSecretsManager() (*AwsSecretsManager, error) {
 		return nil, errors.New("unexpectedly missing AWS_REGION_NAME")
 	}
 
-	session, error := session.NewSession(&aws.Config{
+	session, err := session.NewSession(&aws.Config{
 		Region: &region,
 	})
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	svc := secretsmanager.New(session)
@@ -43,9 +43,9 @@ func (sm AwsSecretsManager) GetSecret(name string, version uint64) ([]byte, erro
 		VersionStage: &versionString,
 	}
 
-	result, error := sm.svc.GetSecretValue(&input)
-	if error != nil {
-		return nil, error
+	result, err := sm.svc.GetSecretValue(&input)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(result.SecretBinary) > 0 {
@@ -56,13 +56,13 @@ func (sm AwsSecretsManager) GetSecret(name string, version uint64) ([]byte, erro
 }
 
 func (sm AwsSecretsManager) GetJWTSigningKey(token *jwt.Token) (interface{}, error) {
-	name, version, error := ParseKid(token)
-	if error != nil {
-		return nil, error
+	name, version, err := ParseKid(token)
+	if err != nil {
+		return nil, err
 	}
 
-	key, error := sm.GetSecret(*name, *version)
-	if error != nil {
+	key, err := sm.GetSecret(*name, *version)
+	if err != nil {
 		return nil, errors.New("no signing key for jwt")
 	}
 

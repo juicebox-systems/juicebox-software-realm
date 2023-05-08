@@ -19,43 +19,43 @@ type BigtableRecordStore struct {
 const familyName = "cf1"
 const columnName = "serializedUserRecord"
 
-func NewBigtableRecordStore(realmId uuid.UUID) (*BigtableRecordStore, error) {
-	projectId := os.Getenv("GCP_PROJECT_ID")
-	if projectId == "" {
-		return nil, errors.New("Unexpectedly missing GCP_PROJECT_ID")
+func NewBigtableRecordStore(realmID uuid.UUID) (*BigtableRecordStore, error) {
+	projectID := os.Getenv("GCP_PROJECT_ID")
+	if projectID == "" {
+		return nil, errors.New("unexpectedly missing GCP_PROJECT_ID")
 	}
 
-	instanceId := os.Getenv("BIGTABLE_INSTANCE_ID")
-	if instanceId == "" {
-		return nil, errors.New("Unexpectedly missing BIGTABLE_INSTANCE_ID")
+	instanceID := os.Getenv("BIGTABLE_INSTANCE_ID")
+	if instanceID == "" {
+		return nil, errors.New("unexpectedly missing BIGTABLE_INSTANCE_ID")
 	}
 
 	ctx := context.Background()
 
-	admin, error := bigtable.NewAdminClient(ctx, projectId, instanceId)
-	if error != nil {
-		return nil, error
+	admin, err := bigtable.NewAdminClient(ctx, projectID, instanceID)
+	if err != nil {
+		return nil, err
 	}
 
-	tableName := realmId.String()
+	tableName := realmID.String()
 
-	if error := admin.CreateTable(ctx, tableName); error != nil {
-		if !strings.HasPrefix(error.Error(), "rpc error: code = AlreadyExists") {
-			return nil, error
+	if err := admin.CreateTable(ctx, tableName); err != nil {
+		if !strings.HasPrefix(err.Error(), "rpc error: code = AlreadyExists") {
+			return nil, err
 		}
 	}
 
-	if error := admin.CreateColumnFamily(ctx, tableName, familyName); error != nil {
-		if !strings.HasPrefix(error.Error(), "rpc error: code = AlreadyExists") {
-			return nil, error
+	if err := admin.CreateColumnFamily(ctx, tableName, familyName); err != nil {
+		if !strings.HasPrefix(err.Error(), "rpc error: code = AlreadyExists") {
+			return nil, err
 		}
 	}
 
 	admin.Close()
 
-	client, error := bigtable.NewClient(ctx, projectId, instanceId)
-	if error != nil {
-		return nil, error
+	client, err := bigtable.NewClient(ctx, projectID, instanceID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &BigtableRecordStore{
@@ -68,16 +68,16 @@ func (bt BigtableRecordStore) Close() {
 	bt.client.Close()
 }
 
-func (bt BigtableRecordStore) GetRecord(recordId UserRecordId) (UserRecord, error) {
+func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
 	userRecord := UserRecord{
 		RegistrationState: NotRegistered{},
 	}
 
 	table := bt.client.Open(bt.tableName)
 
-	row, error := table.ReadRow(context.Background(), string(recordId))
-	if error != nil {
-		return userRecord, error
+	row, err := table.ReadRow(context.Background(), string(recordID))
+	if err != nil {
+		return userRecord, err
 	}
 
 	family, ok := row[familyName]
@@ -88,28 +88,29 @@ func (bt BigtableRecordStore) GetRecord(recordId UserRecordId) (UserRecord, erro
 
 	serializedUserRecord := family[0].Value
 
-	error = cbor.Unmarshal(serializedUserRecord, &userRecord)
-	if error != nil {
-		return userRecord, error
+	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
+	if err != nil {
+		return userRecord, err
 	}
 
 	return userRecord, nil
 }
 
-func (bt BigtableRecordStore) WriteRecord(recordId UserRecordId, record UserRecord) error {
+func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
 	table := bt.client.Open(bt.tableName)
 
-	serializedUserRecord, error := cbor.Marshal(record)
-	if error != nil {
-		return error
+	serializedUserRecord, err := cbor.Marshal(record)
+	if err != nil {
+		return err
 	}
 
 	mut := bigtable.NewMutation()
 	mut.DeleteCellsInFamily(familyName)
 	mut.Set(familyName, columnName, bigtable.Now().TruncateToMilliseconds(), serializedUserRecord)
 
-	if error := table.Apply(context.Background(), string(recordId), mut); error != nil {
-		return error
+	err = table.Apply(context.Background(), string(recordID), mut)
+	if err != nil {
+		return err
 	}
 
 	return nil

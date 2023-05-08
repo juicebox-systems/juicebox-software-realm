@@ -4,19 +4,20 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/cloudflare/circl/group"
 	"github.com/cloudflare/circl/oprf"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/types"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
@@ -24,9 +25,9 @@ import (
 )
 
 func NewRouter(
-	realmId uuid.UUID,
+	realmID uuid.UUID,
 	provider *providers.Provider,
-	disableTls bool,
+	disableTLS bool,
 	port int,
 ) {
 	e := echo.New()
@@ -35,57 +36,59 @@ func NewRouter(
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	jwtConfig := middleware.DefaultJWTConfig
-	jwtConfig.KeyFunc = provider.SecretsManager.GetJWTSigningKey
-
 	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]interface{}{"realm_id": realmId})
+		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID})
 	})
 
 	e.POST("/req", func(c echo.Context) error {
-		body, error := ioutil.ReadAll(c.Request().Body)
-		if error != nil {
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error reading request body")
 		}
 
 		var request requests.SecretsRequest
-		error = cbor.Unmarshal(body, &request)
-		if error != nil {
+		err = cbor.Unmarshal(body, &request)
+		if err != nil {
 			return c.String(http.StatusBadRequest, "Error unmarshalling request body")
 		}
 
-		userRecordId, error := userRecordId(c)
-		if error != nil {
+		userRecordID, err := userRecordID(c)
+		if err != nil {
 			return c.String(http.StatusBadRequest, "Error reading user from jwt")
 		}
 
-		userRecord, error := provider.RecordStore.GetRecord(*userRecordId)
-		if error != nil {
+		userRecord, err := provider.RecordStore.GetRecord(*userRecordID)
+		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error reading from record store")
 		}
 
-		response, updatedUserRecord, error := handleRequest(userRecord, request)
-		if error != nil {
+		response, updatedUserRecord, err := handleRequest(userRecord, request)
+		if err != nil {
 			return c.String(http.StatusBadRequest, "Error processing request")
 		}
 
 		if updatedUserRecord != nil {
-			error := provider.RecordStore.WriteRecord(*userRecordId, *updatedUserRecord)
-			if error != nil {
+			err := provider.RecordStore.WriteRecord(*userRecordID, *updatedUserRecord)
+			if err != nil {
 				return c.String(http.StatusInternalServerError, "Error writing to record store")
 			}
 		}
 
-		serializedResponse, error := cbor.Marshal(response)
-		if error != nil {
+		serializedResponse, err := cbor.Marshal(response)
+		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error marshalling response payload")
 		}
 
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
 		return c.Blob(http.StatusOK, echo.MIMEOctetStream, serializedResponse)
-	}, middleware.JWTWithConfig(jwtConfig))
+	}, echojwt.WithConfig(echojwt.Config{
+		KeyFunc: provider.SecretsManager.GetJWTSigningKey,
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return &jwt.RegisteredClaims{}
+		},
+	}))
 
-	if disableTls {
+	if disableTLS {
 		e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 	} else {
 		e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
@@ -93,39 +96,31 @@ func NewRouter(
 	}
 }
 
-func userRecordId(c echo.Context) (*records.UserRecordId, error) {
+func userRecordID(c echo.Context) (*records.UserRecordID, error) {
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		return nil, errors.New("user is not a jwt token")
 	}
 
-	claims, ok := user.Claims.(jwt.MapClaims)
+	claims, ok := user.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return nil, errors.New("jwt claims of unexpected type")
 	}
 
-	sub, ok := claims["sub"]
-	if !ok {
+	if claims.Subject == "" {
 		return nil, errors.New("jwt claims missing 'sub' field")
 	}
-	userId, ok := sub.(string)
-	if !ok {
-		return nil, errors.New("jwt 'sub' is not a string")
-	}
+	userID := claims.Subject
 
-	iss, ok := claims["iss"]
-	if !ok {
+	if claims.Issuer == "" {
 		return nil, errors.New("jwt claims missing 'iss' field")
 	}
-	tenantId, ok := iss.(string)
-	if !ok {
-		return nil, errors.New("jwt 'iss' is not a string")
-	}
+	tenantID := claims.Issuer
 
-	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantId, userId)))
-	userRecordId := records.UserRecordId(hex.EncodeToString(hash[:]))
+	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantID, userID)))
+	userRecordID := records.UserRecordID(hex.EncodeToString(hash[:]))
 
-	return &userRecordId, nil
+	return &userRecordID, nil
 }
 
 func handleRequest(record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
@@ -188,7 +183,7 @@ func handleRequest(record records.UserRecord, request requests.SecretsRequest) (
 				}, &record, nil
 			}
 
-			state.GuessCount += 1
+			state.GuessCount++
 			record.RegistrationState = state
 
 			key := oprf.PrivateKey{}
@@ -199,14 +194,14 @@ func handleRequest(record records.UserRecord, request requests.SecretsRequest) (
 
 			server := oprf.NewServer(oprf.SuiteRistretto255, &key)
 			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedPin}}
-			blindedOprfResult, error := server.Evaluate(&req)
-			if error != nil {
-				return nil, &record, error
+			blindedOprfResult, err := server.Evaluate(&req)
+			if err != nil {
+				return nil, &record, err
 			}
 
-			serializedBlindedOprfResult, error := blindedOprfResult.Elements[0].MarshalBinary()
-			if error != nil {
-				return nil, &record, error
+			serializedBlindedOprfResult, err := blindedOprfResult.Elements[0].MarshalBinary()
+			if err != nil {
+				return nil, &record, err
 			}
 
 			return &responses.SecretsResponse{
@@ -273,5 +268,5 @@ func handleRequest(record records.UserRecord, request requests.SecretsRequest) (
 		}, &record, nil
 	}
 
-	return nil, nil, errors.New("Unexpected request type")
+	return nil, nil, errors.New("unexpected request type")
 }

@@ -24,32 +24,32 @@ type MongoRecordStore struct {
 const userRecordsCollection string = "userRecords"
 const serializedUserRecordKey string = "serializedUserRecord"
 
-func NewMongoRecordStore(realmId uuid.UUID) (*MongoRecordStore, error) {
+func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
 		return nil, errors.New("unexpectedly missing MONGO_URL")
 	}
 
-	url, error := url.Parse(urlString)
-	if error != nil {
-		return nil, error
+	url, err := url.Parse(urlString)
+	if err != nil {
+		return nil, err
 	}
 
-	databaseName := realmId.String()
+	databaseName := realmID.String()
 	if len(url.Path) > 1 {
 		databaseName = url.Path[1:]
 	}
 
 	clientOptions := options.Client().ApplyURI(urlString)
-	client, error := mongo.Connect(context.Background(), clientOptions)
-	if error != nil {
-		return nil, error
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		return nil, err
 	}
 
-	error = client.Database(databaseName).CreateCollection(context.Background(), userRecordsCollection)
-	if error != nil {
-		if !strings.HasPrefix(error.Error(), "(NamespaceExists)") {
-			return nil, error
+	err = client.Database(databaseName).CreateCollection(context.Background(), userRecordsCollection)
+	if err != nil {
+		if !strings.HasPrefix(err.Error(), "(NamespaceExists)") {
+			return nil, err
 		}
 	}
 
@@ -59,7 +59,7 @@ func NewMongoRecordStore(realmId uuid.UUID) (*MongoRecordStore, error) {
 	}, nil
 }
 
-func (m MongoRecordStore) GetRecord(recordId UserRecordId) (UserRecord, error) {
+func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
 	userRecord := UserRecord{
 		RegistrationState: NotRegistered{},
 	}
@@ -68,17 +68,17 @@ func (m MongoRecordStore) GetRecord(recordId UserRecordId) (UserRecord, error) {
 	collection := database.Collection(userRecordsCollection)
 
 	var result bson.M
-	error := collection.FindOne(
+	err := collection.FindOne(
 		context.Background(),
-		bson.M{"_id": recordId},
+		bson.M{"_id": recordID},
 	).Decode(&result)
-	if error != nil {
-		if strings.HasPrefix(error.Error(), "mongo: no documents in result") {
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "mongo: no documents in result") {
 			// no stored record yet
 			return userRecord, nil
 		}
-		fmt.Printf("what? %+v\n", error)
-		return userRecord, error
+		fmt.Printf("what? %+v\n", err)
+		return userRecord, err
 	}
 
 	record, ok := result[serializedUserRecordKey]
@@ -93,37 +93,37 @@ func (m MongoRecordStore) GetRecord(recordId UserRecordId) (UserRecord, error) {
 
 	serializedUserRecord := primitiveBinaryRecord.Data
 
-	error = cbor.Unmarshal(serializedUserRecord, &userRecord)
-	if error != nil {
-		return userRecord, error
+	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
+	if err != nil {
+		return userRecord, err
 	}
 
 	return userRecord, nil
 }
 
-func (m MongoRecordStore) WriteRecord(recordId UserRecordId, record UserRecord) error {
+func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
 	database := m.client.Database(m.databaseName)
 	collection := database.Collection(userRecordsCollection)
 
-	serializedUserRecord, error := cbor.Marshal(record)
-	if error != nil {
-		return error
+	serializedUserRecord, err := cbor.Marshal(record)
+	if err != nil {
+		return err
 	}
 
-	_, error = collection.UpdateOne(
+	_, err = collection.UpdateOne(
 		context.Background(),
-		bson.M{"_id": recordId},
+		bson.M{"_id": recordID},
 		bson.M{
 			"$set": bson.M{
-				"_id":                   recordId,
+				"_id":                   recordID,
 				serializedUserRecordKey: serializedUserRecord,
 			},
 		},
 		options.Update().SetUpsert(true),
 	)
 
-	if error != nil {
-		return error
+	if err != nil {
+		return err
 	}
 
 	return nil

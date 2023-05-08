@@ -30,7 +30,7 @@ Usage of jb-sw-realm:
                 AWS_REGION_NAME      = The name of the region your AWS instance is in
 
                 Note: AWS uses DynamoDB and assumes you have a table created with a name
-                      matching your realm id and a partitionKey named recordId.
+                      matching your realm id and a partitionKey named recordID.
         mongo:
                 MONGO_URL = The url to acess your MongoDB instance in the form of:
                             mongodb://username:password@host:port/database_name
@@ -76,7 +76,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
-### Generate a Realm Id
+### Generate a Realm ID
 
 Every realm needs a unique 16-byte identifier. We recommend using a UUID for your realm.
 
@@ -87,7 +87,7 @@ REALM_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 echo $REALM_ID
 ```
 
-Remember this Realm Id, as you'll need it to configure any connecting clients.
+Remember this Realm ID, as you'll need it to configure any connecting clients.
 
 ### Choose Your Provider
 

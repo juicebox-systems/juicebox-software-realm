@@ -19,28 +19,28 @@ type DynamoDbRecordStore struct {
 const primaryKeyName string = "recordId"
 const attributedName string = "serializedUserRecord"
 
-func NewDynamoDbRecordStore(realmId uuid.UUID) (*DynamoDbRecordStore, error) {
+func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
 		return nil, errors.New("unexpectedly missing AWS_REGION_NAME")
 	}
 
-	session, error := session.NewSession(&aws.Config{
+	session, err := session.NewSession(&aws.Config{
 		Region: &region,
 	})
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	svc := dynamodb.New(session)
 
 	return &DynamoDbRecordStore{
 		svc:       svc,
-		tableName: realmId.String(),
+		tableName: realmID.String(),
 	}, nil
 }
 
-func (db DynamoDbRecordStore) GetRecord(recordId UserRecordId) (UserRecord, error) {
+func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
 	userRecord := UserRecord{
 		RegistrationState: NotRegistered{},
 	}
@@ -49,14 +49,14 @@ func (db DynamoDbRecordStore) GetRecord(recordId UserRecordId) (UserRecord, erro
 		TableName: aws.String(db.tableName),
 		Key: map[string]*dynamodb.AttributeValue{
 			primaryKeyName: {
-				S: aws.String(string(recordId)),
+				S: aws.String(string(recordID)),
 			},
 		},
 	}
 
-	result, error := db.svc.GetItem(input)
-	if error != nil {
-		return userRecord, error
+	result, err := db.svc.GetItem(input)
+	if err != nil {
+		return userRecord, err
 	}
 
 	if len(result.Item) == 0 {
@@ -71,25 +71,25 @@ func (db DynamoDbRecordStore) GetRecord(recordId UserRecordId) (UserRecord, erro
 
 	serializedUserRecord := attributeValue.B
 
-	error = cbor.Unmarshal(serializedUserRecord, &userRecord)
-	if error != nil {
-		return userRecord, error
+	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
+	if err != nil {
+		return userRecord, err
 	}
 
 	return userRecord, nil
 }
 
-func (db DynamoDbRecordStore) WriteRecord(recordId UserRecordId, record UserRecord) error {
-	serializedUserRecord, error := cbor.Marshal(record)
-	if error != nil {
-		return error
+func (db DynamoDbRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
+	serializedUserRecord, err := cbor.Marshal(record)
+	if err != nil {
+		return err
 	}
 
 	input := &dynamodb.PutItemInput{
 		TableName: aws.String(db.tableName),
 		Item: map[string]*dynamodb.AttributeValue{
 			primaryKeyName: {
-				S: aws.String(string(recordId)),
+				S: aws.String(string(recordID)),
 			},
 			attributedName: {
 				B: serializedUserRecord,
@@ -97,9 +97,9 @@ func (db DynamoDbRecordStore) WriteRecord(recordId UserRecordId, record UserReco
 		},
 	}
 
-	_, error = db.svc.PutItem(input)
-	if error != nil {
-		return error
+	_, err = db.svc.PutItem(input)
+	if err != nil {
+		return err
 	}
 
 	return nil

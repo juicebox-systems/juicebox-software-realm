@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/types"
 )
@@ -14,10 +14,6 @@ import (
 type SecretsManager interface {
 	GetSecret(name string, version uint64) ([]byte, error)
 	GetJWTSigningKey(token *jwt.Token) (interface{}, error)
-}
-
-func keyFunc(t *jwt.Token) (interface{}, error) {
-	return []byte("your-secret-key"), nil
 }
 
 func ParseKid(token *jwt.Token) (*string, *uint64, error) {
@@ -40,15 +36,15 @@ func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 	tenantSecretsKey := "tenant-" + tenantName
 
 	versionString := split[1]
-	version, error := strconv.ParseUint(versionString, 10, 64)
-	if error != nil {
+	version, err := strconv.ParseUint(versionString, 10, 64)
+	if err != nil {
 		return nil, nil, errors.New("jwt kid contained invalid version")
 	}
 
 	return &tenantSecretsKey, &version, nil
 }
 
-func NewSecretsManager(provider types.ProviderName, realmId uuid.UUID) (SecretsManager, error) {
+func NewSecretsManager(provider types.ProviderName, realmID uuid.UUID) (SecretsManager, error) {
 	switch provider {
 	case types.GCP:
 		return NewGcpSecretsManager()
@@ -57,7 +53,7 @@ func NewSecretsManager(provider types.ProviderName, realmId uuid.UUID) (SecretsM
 	case types.AWS:
 		return NewAwsSecretsManager()
 	case types.Mongo:
-		return NewMongoSecretsManager(realmId)
+		return NewMongoSecretsManager(realmID)
 	}
-	return nil, fmt.Errorf("Unexpected provider %v", provider)
+	return nil, fmt.Errorf("unexpected provider %v", provider)
 }

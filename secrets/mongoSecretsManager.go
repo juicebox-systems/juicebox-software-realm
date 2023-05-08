@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,26 +23,26 @@ const secretsCollection string = "tenantSecrets"
 const secretsVersionKey string = "version"
 const secretsSecretKey string = "secret"
 
-func NewMongoSecretsManager(realmId uuid.UUID) (*MongoSecretsManager, error) {
+func NewMongoSecretsManager(realmID uuid.UUID) (*MongoSecretsManager, error) {
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
 		return nil, errors.New("unexpectedly missing MONGO_URL")
 	}
 
-	url, error := url.Parse(urlString)
-	if error != nil {
-		return nil, error
+	url, err := url.Parse(urlString)
+	if err != nil {
+		return nil, err
 	}
 
-	databaseName := realmId.String()
+	databaseName := realmID.String()
 	if len(url.Path) > 1 {
 		databaseName = url.Path[1:]
 	}
 
 	clientOptions := options.Client().ApplyURI(urlString)
-	client, error := mongo.Connect(context.Background(), clientOptions)
-	if error != nil {
-		return nil, error
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		return nil, err
 	}
 
 	return &MongoSecretsManager{
@@ -56,12 +56,12 @@ func (sm MongoSecretsManager) GetSecret(name string, version uint64) ([]byte, er
 	collection := database.Collection(secretsCollection)
 
 	var result bson.M
-	error := collection.FindOne(
+	err := collection.FindOne(
 		context.Background(),
 		bson.M{"_id": name, secretsVersionKey: version},
 	).Decode(&result)
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	secret, ok := result[secretsSecretKey]
@@ -80,13 +80,13 @@ func (sm MongoSecretsManager) GetSecret(name string, version uint64) ([]byte, er
 }
 
 func (sm MongoSecretsManager) GetJWTSigningKey(token *jwt.Token) (interface{}, error) {
-	name, version, error := ParseKid(token)
-	if error != nil {
-		return nil, error
+	name, version, err := ParseKid(token)
+	if err != nil {
+		return nil, err
 	}
 
-	key, error := sm.GetSecret(*name, *version)
-	if error != nil {
+	key, err := sm.GetSecret(*name, *version)
+	if err != nil {
 		return nil, errors.New("no signing key for jwt")
 	}
 

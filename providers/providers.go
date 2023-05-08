@@ -31,25 +31,25 @@ func Parse(nameString string) (types.ProviderName, error) {
 	}
 }
 
-func NewProvider(name types.ProviderName, realmId uuid.UUID) (*Provider, error) {
-	fmt.Printf("Realm Id: %s\n\n", realmId.String())
+func NewProvider(name types.ProviderName, realmID uuid.UUID) (*Provider, error) {
+	fmt.Printf("Realm ID: %s\n\n", realmID.String())
 
 	fmt.Print("Connecting to secrets manager...")
 
-	secretsManager, error := secrets.NewSecretsManager(name, realmId)
-	if error != nil {
-		fmt.Printf("\rFailed to connect to secrets manager: %s.\n", error)
-		return nil, error
+	secretsManager, err := secrets.NewSecretsManager(name, realmID)
+	if err != nil {
+		fmt.Printf("\rFailed to connect to secrets manager: %s.\n", err)
+		return nil, err
 	}
 
 	fmt.Print("\rEstablished connection to secrets manager.\n")
 
 	fmt.Print("Connecting to record store...")
 
-	recordStore, error := records.NewRecordStore(name, realmId)
-	if error != nil {
-		fmt.Printf("\rFailed to connect to record store: %s.\n", error)
-		return nil, error
+	recordStore, err := records.NewRecordStore(name, realmID)
+	if err != nil {
+		fmt.Printf("\rFailed to connect to record store: %s.\n", err)
+		return nil, err
 	}
 
 	fmt.Print("\rEstablished connection to record store.\n\n")

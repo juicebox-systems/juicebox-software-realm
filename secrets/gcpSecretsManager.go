@@ -8,28 +8,28 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type GcpSecretsManager struct {
 	client    *secretmanager.Client
-	projectId string
+	projectID string
 }
 
 func NewGcpSecretsManager() (*GcpSecretsManager, error) {
-	projectId := os.Getenv("GCP_PROJECT_ID")
-	if projectId == "" {
-		return nil, fmt.Errorf("Unexpectedly missing GCP_PROJECT_ID")
+	projectID := os.Getenv("GCP_PROJECT_ID")
+	if projectID == "" {
+		return nil, fmt.Errorf("unexpectedly missing GCP_PROJECT_ID")
 	}
 
-	client, error := secretmanager.NewClient(context.Background())
-	if error != nil {
-		return nil, error
+	client, err := secretmanager.NewClient(context.Background())
+	if err != nil {
+		return nil, err
 	}
 
 	return &GcpSecretsManager{
 		client:    client,
-		projectId: projectId,
+		projectID: projectID,
 	}, nil
 }
 
@@ -38,25 +38,25 @@ func (sm GcpSecretsManager) Close() {
 }
 
 func (sm GcpSecretsManager) GetSecret(name string, version uint64) ([]byte, error) {
-	result, error := sm.client.AccessSecretVersion(context.Background(), &secretmanagerpb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%d", sm.projectId, name, version),
+	result, err := sm.client.AccessSecretVersion(context.Background(), &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%d", sm.projectID, name, version),
 	})
 
-	if error != nil {
-		return nil, error
+	if err != nil {
+		return nil, err
 	}
 
 	return result.Payload.Data, nil
 }
 
 func (sm GcpSecretsManager) GetJWTSigningKey(token *jwt.Token) (interface{}, error) {
-	name, version, error := ParseKid(token)
-	if error != nil {
-		return nil, error
+	name, version, err := ParseKid(token)
+	if err != nil {
+		return nil, err
 	}
 
-	key, error := sm.GetSecret(*name, *version)
-	if error != nil {
+	key, err := sm.GetSecret(*name, *version)
+	if err != nil {
 		return nil, errors.New("no signing key for jwt")
 	}
 

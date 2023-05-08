@@ -8,20 +8,20 @@ import (
 )
 
 type RecordStore interface {
-	GetRecord(recordId UserRecordId) (UserRecord, error)
-	WriteRecord(recordId UserRecordId, record UserRecord) error
+	GetRecord(recordID UserRecordID) (UserRecord, error)
+	WriteRecord(recordID UserRecordID, record UserRecord) error
 }
 
-func NewRecordStore(provider types.ProviderName, realmId uuid.UUID) (RecordStore, error) {
+func NewRecordStore(provider types.ProviderName, realmID uuid.UUID) (RecordStore, error) {
 	switch provider {
 	case types.GCP:
-		return NewBigtableRecordStore(realmId)
+		return NewBigtableRecordStore(realmID)
 	case types.Memory:
 		return MemoryRecordStore{}, nil
 	case types.AWS:
-		return NewDynamoDbRecordStore(realmId)
+		return NewDynamoDbRecordStore(realmID)
 	case types.Mongo:
-		return NewMongoRecordStore(realmId)
+		return NewMongoRecordStore(realmID)
 	}
-	return nil, fmt.Errorf("Unexpected provider %v", provider)
+	return nil, fmt.Errorf("unexpected provider %v", provider)
 }
