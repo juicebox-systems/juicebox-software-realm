@@ -2,7 +2,6 @@ package records
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"os"
 	"strings"
@@ -85,16 +84,12 @@ func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, inte
 		return userRecord, nil, nil
 	}
 
-	readRecord := string(family[0].Value)
-
-	serializedUserRecord, err := hex.DecodeString(readRecord)
-	if err != nil {
-		return userRecord, readRecord, nil
-	}
+	readRecord := family[0]
+	serializedUserRecord := readRecord.Value
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, readRecord, err
+		return userRecord, readRecord, nil
 	}
 
 	return userRecord, readRecord, nil
@@ -110,7 +105,7 @@ func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserReco
 
 	mut := bigtable.NewMutation()
 	mut.DeleteCellsInFamily(familyName)
-	mut.Set(familyName, columnName, bigtable.Timestamp(0), []byte(hex.EncodeToString(serializedUserRecord)))
+	mut.Set(familyName, columnName, bigtable.ServerTime, serializedUserRecord)
 
 	var conditionalMutation *bigtable.Mutation
 
@@ -121,15 +116,15 @@ func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserReco
 		)
 		conditionalMutation = bigtable.NewCondMutation(filter, nil, mut)
 	} else {
-		readRecord, ok := readRecord.(string)
+		readRecord, ok := readRecord.(bigtable.ReadItem)
 		if !ok {
 			return errors.New("read record was of unexpected type")
 		}
-
 		filter := bigtable.ChainFilters(
 			bigtable.FamilyFilter(familyName),
 			bigtable.ColumnFilter(columnName),
-			bigtable.ValueFilter(readRecord),
+			// only allow changes if the record's timestamp has remained unchanged (to the millisecond)
+			bigtable.TimestampRangeFilterMicros(readRecord.Timestamp, readRecord.Timestamp+1000),
 		)
 		conditionalMutation = bigtable.NewCondMutation(filter, mut, nil)
 	}
