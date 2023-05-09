@@ -17,7 +17,7 @@ type DynamoDbRecordStore struct {
 }
 
 const primaryKeyName string = "recordId"
-const attributedName string = "serializedUserRecord"
+const userRecordAttributeName string = "serializedUserRecord"
 
 func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 	region := os.Getenv("AWS_REGION_NAME")
@@ -40,10 +40,8 @@ func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 	}, nil
 }
 
-func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
-	userRecord := UserRecord{
-		RegistrationState: NotRegistered{},
-	}
+func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+	userRecord := DefaultUserRecord()
 
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(db.tableName),
@@ -56,30 +54,30 @@ func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, erro
 
 	result, err := db.svc.GetItem(input)
 	if err != nil {
-		return userRecord, err
+		return userRecord, nil, err
 	}
 
 	if len(result.Item) == 0 {
 		// no stored record yet
-		return userRecord, nil
+		return userRecord, nil, nil
 	}
 
-	attributeValue, ok := result.Item[attributedName]
+	attributeValue, ok := result.Item[userRecordAttributeName]
 	if !ok {
-		return userRecord, errors.New("failed to read attribute")
+		return userRecord, nil, errors.New("failed to read attribute")
 	}
 
 	serializedUserRecord := attributeValue.B
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, err
+		return userRecord, serializedUserRecord, err
 	}
 
-	return userRecord, nil
+	return userRecord, serializedUserRecord, nil
 }
 
-func (db DynamoDbRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
+func (db DynamoDbRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
 		return err
@@ -91,10 +89,32 @@ func (db DynamoDbRecordStore) WriteRecord(recordID UserRecordID, record UserReco
 			primaryKeyName: {
 				S: aws.String(string(recordID)),
 			},
-			attributedName: {
+			userRecordAttributeName: {
 				B: serializedUserRecord,
 			},
 		},
+	}
+
+	if readRecord == nil {
+		input.ConditionExpression = aws.String("attribute_not_exists(#primaryKey)")
+		input.ExpressionAttributeNames = map[string]*string{
+			"#primaryKey": aws.String(primaryKeyName),
+		}
+	} else {
+		readRecord, ok := readRecord.([]byte)
+		if !ok {
+			return errors.New("read record was of unexpected type")
+		}
+
+		input.ConditionExpression = aws.String("#columnName = :previousValue")
+		input.ExpressionAttributeNames = map[string]*string{
+			"#columnName": aws.String(userRecordAttributeName),
+		}
+		input.ExpressionAttributeValues = map[string]*dynamodb.AttributeValue{
+			":previousValue": {
+				B: readRecord,
+			},
+		}
 	}
 
 	_, err = db.svc.PutItem(input)

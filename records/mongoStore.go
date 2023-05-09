@@ -59,10 +59,8 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 	}, nil
 }
 
-func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
-	userRecord := UserRecord{
-		RegistrationState: NotRegistered{},
-	}
+func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+	userRecord := DefaultUserRecord()
 
 	database := m.client.Database(m.databaseName)
 	collection := database.Collection(userRecordsCollection)
@@ -75,33 +73,33 @@ func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "mongo: no documents in result") {
 			// no stored record yet
-			return userRecord, nil
+			return userRecord, nil, nil
 		}
 		fmt.Printf("what? %+v\n", err)
-		return userRecord, err
+		return userRecord, nil, err
 	}
 
 	record, ok := result[serializedUserRecordKey]
 	if !ok {
-		return userRecord, errors.New("secret unexpectedly missing 'secret' key")
+		return userRecord, nil, errors.New("secret unexpectedly missing 'secret' key")
 	}
 
 	primitiveBinaryRecord, ok := record.(primitive.Binary)
 	if !ok {
-		return userRecord, errors.New("user record was of wrong type")
+		return userRecord, nil, errors.New("user record was of wrong type")
 	}
 
 	serializedUserRecord := primitiveBinaryRecord.Data
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, err
+		return userRecord, serializedUserRecord, err
 	}
 
-	return userRecord, nil
+	return userRecord, serializedUserRecord, nil
 }
 
-func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
+func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	database := m.client.Database(m.databaseName)
 	collection := database.Collection(userRecordsCollection)
 
@@ -112,14 +110,14 @@ func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) 
 
 	_, err = collection.UpdateOne(
 		context.Background(),
-		bson.M{"_id": recordID},
+		bson.M{"_id": recordID, serializedUserRecordKey: readRecord},
 		bson.M{
 			"$set": bson.M{
 				"_id":                   recordID,
 				serializedUserRecordKey: serializedUserRecord,
 			},
 		},
-		options.Update().SetUpsert(true),
+		options.Update().SetUpsert(readRecord == nil),
 	)
 
 	if err != nil {

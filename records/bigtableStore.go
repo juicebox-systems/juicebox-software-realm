@@ -2,6 +2,7 @@ package records
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"os"
 	"strings"
@@ -68,35 +69,38 @@ func (bt BigtableRecordStore) Close() {
 	bt.client.Close()
 }
 
-func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, error) {
-	userRecord := UserRecord{
-		RegistrationState: NotRegistered{},
-	}
+func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+	userRecord := DefaultUserRecord()
 
 	table := bt.client.Open(bt.tableName)
 
 	row, err := table.ReadRow(context.Background(), string(recordID))
 	if err != nil {
-		return userRecord, err
+		return userRecord, nil, err
 	}
 
 	family, ok := row[familyName]
 	if !ok {
 		// no stored record yet
-		return userRecord, nil
+		return userRecord, nil, nil
 	}
 
-	serializedUserRecord := family[0].Value
+	readRecord := string(family[0].Value)
+
+	serializedUserRecord, err := hex.DecodeString(readRecord)
+	if err != nil {
+		return userRecord, readRecord, nil
+	}
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, err
+		return userRecord, readRecord, err
 	}
 
-	return userRecord, nil
+	return userRecord, readRecord, nil
 }
 
-func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserRecord) error {
+func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	table := bt.client.Open(bt.tableName)
 
 	serializedUserRecord, err := cbor.Marshal(record)
@@ -106,11 +110,40 @@ func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserReco
 
 	mut := bigtable.NewMutation()
 	mut.DeleteCellsInFamily(familyName)
-	mut.Set(familyName, columnName, bigtable.Now().TruncateToMilliseconds(), serializedUserRecord)
+	mut.Set(familyName, columnName, bigtable.Timestamp(0), []byte(hex.EncodeToString(serializedUserRecord)))
 
-	err = table.Apply(context.Background(), string(recordID), mut)
+	var conditionalMutation *bigtable.Mutation
+
+	if readRecord == nil {
+		filter := bigtable.ChainFilters(
+			bigtable.FamilyFilter(familyName),
+			bigtable.ColumnFilter(columnName),
+		)
+		conditionalMutation = bigtable.NewCondMutation(filter, nil, mut)
+	} else {
+		readRecord, ok := readRecord.(string)
+		if !ok {
+			return errors.New("read record was of unexpected type")
+		}
+
+		filter := bigtable.ChainFilters(
+			bigtable.FamilyFilter(familyName),
+			bigtable.ColumnFilter(columnName),
+			bigtable.ValueFilter(readRecord),
+		)
+		conditionalMutation = bigtable.NewCondMutation(filter, mut, nil)
+	}
+
+	var success bool
+	opt := bigtable.GetCondMutationResult(&success)
+
+	err = table.Apply(context.Background(), string(recordID), conditionalMutation, opt)
 	if err != nil {
 		return err
+	}
+
+	if !success {
+		return errors.New("failed to write to bigtable, record mutated since read")
 	}
 
 	return nil

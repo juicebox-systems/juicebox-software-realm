@@ -57,7 +57,7 @@ func NewRouter(
 			return c.String(http.StatusBadRequest, "Error reading user from jwt")
 		}
 
-		userRecord, err := provider.RecordStore.GetRecord(*userRecordID)
+		userRecord, readRecord, err := provider.RecordStore.GetRecord(*userRecordID)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error reading from record store")
 		}
@@ -68,7 +68,7 @@ func NewRouter(
 		}
 
 		if updatedUserRecord != nil {
-			err := provider.RecordStore.WriteRecord(*userRecordID, *updatedUserRecord)
+			err := provider.RecordStore.WriteRecord(*userRecordID, *updatedUserRecord, readRecord)
 			if err != nil {
 				return c.String(http.StatusInternalServerError, "Error writing to record store")
 			}

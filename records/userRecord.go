@@ -27,6 +27,12 @@ type Registered struct {
 type NoGuesses struct{}
 type NotRegistered struct{}
 
+func DefaultUserRecord() UserRecord {
+	return UserRecord{
+		RegistrationState: NotRegistered{},
+	}
+}
+
 func (ur *UserRecord) MarshalCBOR() ([]byte, error) {
 	var m interface{}
 
