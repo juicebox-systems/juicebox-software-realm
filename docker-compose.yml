@@ -13,3 +13,7 @@ services:
       GCP_PROJECT_ID:
       AWS_REGION_NAME:
       MONGO_URL:
+      TENANT_SECRETS: '{"test":{"1":"an-auth-token-key"}}'
+      LETS_ENCRYPT_CACHE: /var/cache/letsencrypt
+    volumes:
+      - /var/cache/letsencrypt:/var/cache/letsencrypt

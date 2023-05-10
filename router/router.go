@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/cloudflare/circl/group"
 	"github.com/cloudflare/circl/oprf"
@@ -46,7 +47,6 @@ func RunRouter(
 	e.POST("/req", func(c echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
-			c.Request().Context()
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading request body")
 		}
 
@@ -97,7 +97,12 @@ func RunRouter(
 	if disableTLS {
 		e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 	} else {
-		e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+		cache := os.Getenv("LETS_ENCRYPT_CACHE")
+		if cache != "" {
+			e.AutoTLSManager.Cache = autocert.DirCache(cache)
+		} else {
+			panic("missing LETS_ENCRYPT_CACHE environment configuration")
+		}
 		e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", port)))
 	}
 }

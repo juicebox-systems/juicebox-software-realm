@@ -3,6 +3,10 @@ FROM golang:1.20
 ARG PROVIDER=memory
 ENV PROVIDER=$PROVIDER
 
+ENV LETS_ENCRYPT_CACHE="/var/cache/letsencrypt"
+
+VOLUME [ "${LETS_ENCRYPT_CACHE}" ]
+
 COPY . /app
 
 WORKDIR /app
