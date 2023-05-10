@@ -47,7 +47,7 @@ func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 	}, nil
 }
 
-func (db DynamoDbRecordStore) GetRecord(_ context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
+func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
 	userRecord := DefaultUserRecord()
 
 	input := &dynamodb.GetItemInput{
@@ -59,7 +59,7 @@ func (db DynamoDbRecordStore) GetRecord(_ context.Context, recordID UserRecordID
 		},
 	}
 
-	result, err := db.svc.GetItem(input)
+	result, err := db.svc.GetItemWithContext(ctx, input)
 	if err != nil {
 		return userRecord, nil, err
 	}
@@ -84,7 +84,7 @@ func (db DynamoDbRecordStore) GetRecord(_ context.Context, recordID UserRecordID
 	return userRecord, result.Item, nil
 }
 
-func (db DynamoDbRecordStore) WriteRecord(_ context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func (db DynamoDbRecordStore) WriteRecord(_ context.Context, recordID UserRecord
 		}
 	}
 
-	_, err = db.svc.PutItem(input)
+	_, err = db.svc.PutItemWithContext(ctx, input)
 	if err != nil {
 		return err
 	}
