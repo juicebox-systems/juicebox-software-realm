@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
@@ -52,7 +51,8 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 
 	err = client.Database(databaseName).CreateCollection(context.Background(), userRecordsCollection)
 	if err != nil {
-		if !strings.HasPrefix(err.Error(), "(NamespaceExists)") {
+		// ignore the "NamespaceExists" error code
+		if mErr, ok := err.(mongo.CommandError); !ok || !mErr.HasErrorCode(48) {
 			return nil, err
 		}
 	}
@@ -75,7 +75,7 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 		bson.M{"_id": recordID},
 	).Decode(&result)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "mongo: no documents in result") {
+		if err == mongo.ErrNoDocuments {
 			// no stored record yet
 			return userRecord, nil, nil
 		}
