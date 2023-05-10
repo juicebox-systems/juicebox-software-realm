@@ -9,34 +9,38 @@ We recommend adding at least one software backed realm to your configuration alo
 ```
 Usage of jb-sw-realm:
   -disable-tls
-        Set this flag to insecurely run the server without TLS.
+    	Set this flag to insecurely run the server without TLS.
   -id string
-        A 16-byte hex string identifying this realm. (default random)
+    	A 16-byte hex string identifying this realm. (default random)
 
-        We recommend using a UUID, but any 16-byte hex string is valid.
+    	We recommend using a UUID, but any 16-byte hex string is valid.
 
-        Note: Changing this id for an existing realm will result in data loss.
+    	Note: Changing this id for an existing realm will result in data loss.
   -port int
-        The port to run the server on. (default 443)
+    	The port to run the server on. (default 443)
   -provider string
-        The provider to use. [gcs|aws|mongo|memory] (default "memory")
+    	The provider to use. [gcs|aws|mongo|memory] (default "memory")
 
-        Some providers take additional configuration via environment variables.
+    	Some providers take additional configuration via environment variables.
 
-        gcp:
-                BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
-                GCP_PROJECT_ID       = The id of your project in GCP
-        aws:
-                AWS_REGION_NAME      = The name of the region your AWS instance is in
+    	gcp:
+    	    BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
+    	    GCP_PROJECT_ID       = The id of your project in GCP
+    	aws:
+    	    AWS_REGION_NAME      = The name of the region your AWS instance is in
 
-                Note: AWS uses DynamoDB and assumes you have a table created with a name
-                      matching your realm id and a partitionKey named recordID.
-        mongo:
-                MONGO_URL = The url to acess your MongoDB instance in the form of:
-                            mongodb://username:password@host:port/database_name
+    	    Note: AWS uses DynamoDB and assumes you have a table created with a name
+    	          matching your realm id and a partitionKey named recordID.
+    	mongo:
+    	    MONGO_URL = The url to acess your MongoDB instance in the form of:
+    	                mongodb://username:password@host:port/database
 
-                Note: User records are stored in a collection named "userRecords".
-	            Tenant signing keys are stored in a collection named "tenantSecrets".
+
+    	    Note: User records are stored in a collection named "userRecords".
+    	    Tenant signing keys are stored in a collection named "tenantSecrets".
+    	memory:
+    	    TENANT_SECRETS = The versioned tenant secrets, in JSON format.
+    	                     For example: {"tenantName":{"1":"tenantSecretKey"}}
 ```
 
 Compile the Juicebox Software Realm with `go build -o jb-sw-realm` or compile and run with `go run main.go`.
@@ -44,7 +48,7 @@ Compile the Juicebox Software Realm with `go build -o jb-sw-realm` or compile an
 To quickly spin up a local realm for testing, you can run:
 
  ```sh
-jb-sw-realm -disable-tls -port 8080
+TENANT_SECRETS='{"test":{"1":"an-auth-token-key"}}' jb-sw-realm -disable-tls -port 8080
  ```
 
 ## Running a Realm

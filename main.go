@@ -39,20 +39,23 @@ Note: Changing this id for an existing realm will result in data loss.`,
 Some providers take additional configuration via environment variables.
 
 gcp:
-	BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
-	GCP_PROJECT_ID       = The id of your project in GCP
+    BIGTABLE_INSTANCE_ID = The id of your Bigtable instance in GCP
+    GCP_PROJECT_ID       = The id of your project in GCP
 aws:
-	AWS_REGION_NAME 	 = The name of the region your AWS instance is in
+    AWS_REGION_NAME      = The name of the region your AWS instance is in
 
-	Note: AWS uses DynamoDB and assumes you have a table created with a name
-		  matching your realm id and a partitionKey named recordID.
+    Note: AWS uses DynamoDB and assumes you have a table created with a name
+          matching your realm id and a partitionKey named recordID.
 mongo:
-	MONGO_URL = The url to acess your MongoDB instance in the form of:
-			    mongodb://username:password@host:port/database
+    MONGO_URL = The url to acess your MongoDB instance in the form of:
+                mongodb://username:password@host:port/database
 
 
-	Note: User records are stored in a collection named "userRecords".
-	Tenant signing keys are stored in a collection named "tenantSecrets".`,
+    Note: User records are stored in a collection named "userRecords".
+    Tenant signing keys are stored in a collection named "tenantSecrets".
+memory:
+    TENANT_SECRETS = The versioned tenant secrets, in JSON format.
+                     For example: {"tenantName":{"1":"tenantSecretKey"}}`,
 	)
 
 	flag.Parse()

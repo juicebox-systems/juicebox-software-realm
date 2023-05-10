@@ -71,7 +71,7 @@ func NewSecretsManager(provider types.ProviderName, realmID uuid.UUID) (SecretsM
 	case types.GCP:
 		return NewGcpSecretsManager()
 	case types.Memory:
-		return MemorySecretsManager{}, nil
+		return NewMemorySecretsManager()
 	case types.AWS:
 		return NewAwsSecretsManager()
 	case types.Mongo:
