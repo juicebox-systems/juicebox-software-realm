@@ -11,6 +11,7 @@ import (
 type UserRecordID string
 
 type UserRecord struct {
+	// oneof Registered, NotRegistered, NoGuesses
 	RegistrationState interface{} `cbor:"registration_state"`
 }
 
