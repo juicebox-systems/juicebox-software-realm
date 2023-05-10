@@ -46,40 +46,41 @@ func RunRouter(
 	e.POST("/req", func(c echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, "Error reading request body")
+			c.Request().Context()
+			return contextAwareError(c, http.StatusInternalServerError, "Error reading request body")
 		}
 
 		var request requests.SecretsRequest
 		err = cbor.Unmarshal(body, &request)
 		if err != nil {
-			return c.String(http.StatusBadRequest, "Error unmarshalling request body")
+			return contextAwareError(c, http.StatusBadRequest, "Error unmarshalling request body")
 		}
 
 		userRecordID, err := userRecordID(c)
 		if err != nil {
-			return c.String(http.StatusBadRequest, "Error reading user from jwt")
+			return contextAwareError(c, http.StatusBadRequest, "Error reading user from jwt")
 		}
 
 		userRecord, readRecord, err := provider.RecordStore.GetRecord(c.Request().Context(), *userRecordID)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, "Error reading from record store")
+			return contextAwareError(c, http.StatusInternalServerError, "Error reading from record store")
 		}
 
 		response, updatedUserRecord, err := handleRequest(userRecord, request)
 		if err != nil {
-			return c.String(http.StatusBadRequest, "Error processing request")
+			return contextAwareError(c, http.StatusBadRequest, "Error processing request")
 		}
 
 		if updatedUserRecord != nil {
 			err := provider.RecordStore.WriteRecord(c.Request().Context(), *userRecordID, *updatedUserRecord, readRecord)
 			if err != nil {
-				return c.String(http.StatusInternalServerError, "Error writing to record store")
+				return contextAwareError(c, http.StatusInternalServerError, "Error writing to record store")
 			}
 		}
 
 		serializedResponse, err := cbor.Marshal(response)
 		if err != nil {
-			return c.String(http.StatusInternalServerError, "Error marshalling response payload")
+			return contextAwareError(c, http.StatusInternalServerError, "Error marshalling response payload")
 		}
 
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
@@ -274,4 +275,15 @@ func handleRequest(record records.UserRecord, request requests.SecretsRequest) (
 	}
 
 	return nil, nil, errors.New("unexpected request type")
+}
+
+func contextAwareError(c echo.Context, code int, str string) error {
+	select {
+	case <-c.Request().Context().Done():
+		// for ease of monitoring, use 499 (client closed request)
+		// rather than 400 or 500 when the request was canceled.
+		return c.String(499, "Client closed request")
+	default:
+		return c.String(code, str)
+	}
 }
