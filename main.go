@@ -84,6 +84,10 @@ memory:
 		realmID = parsedID
 	}
 
+	if envProvider := os.Getenv("PROVIDER"); envProvider != "" && *providerString == "" {
+		providerString = &envProvider
+	}
+
 	providerName, err := providers.Parse(*providerString)
 	if err != nil {
 		if *providerString == "" {
