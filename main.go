@@ -62,6 +62,12 @@ memory:
 
 	var realmID uuid.UUID
 
+	// if no id was provided, check if the REALM_ID env
+	// variable is set before generating a random one
+	if envIDString := os.Getenv("REALM_ID"); envIDString != "" && *idString == "" {
+		idString = &envIDString
+	}
+
 	if *idString == "" {
 		randomID, err := uuid.NewRandom()
 		if err != nil {
