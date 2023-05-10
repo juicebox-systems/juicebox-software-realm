@@ -12,7 +12,7 @@ func TestParse(t *testing.T) {
 	provider, err := Parse("invalid")
 	assert.Error(t, err)
 	assert.EqualError(t, err, "invalid ProviderName: invalid")
-	assert.Empty(t, provider)
+	assert.Negative(t, provider)
 
 	// random case provider
 	provider, err = Parse("gCp")

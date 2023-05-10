@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
+	"github.com/juicebox-software-realm/secrets"
 	"github.com/juicebox-software-realm/types"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -24,7 +26,7 @@ import (
 	"golang.org/x/crypto/blake2s"
 )
 
-func NewRouter(
+func RunRouter(
 	realmID uuid.UUID,
 	provider *providers.Provider,
 	disableTLS bool,
@@ -35,6 +37,7 @@ func NewRouter(
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.BodyLimit("2K"))
 
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID})
@@ -57,7 +60,7 @@ func NewRouter(
 			return c.String(http.StatusBadRequest, "Error reading user from jwt")
 		}
 
-		userRecord, readRecord, err := provider.RecordStore.GetRecord(*userRecordID)
+		userRecord, readRecord, err := provider.RecordStore.GetRecord(c.Request().Context(), *userRecordID)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error reading from record store")
 		}
@@ -68,7 +71,7 @@ func NewRouter(
 		}
 
 		if updatedUserRecord != nil {
-			err := provider.RecordStore.WriteRecord(*userRecordID, *updatedUserRecord, readRecord)
+			err := provider.RecordStore.WriteRecord(c.Request().Context(), *userRecordID, *updatedUserRecord, readRecord)
 			if err != nil {
 				return c.String(http.StatusInternalServerError, "Error writing to record store")
 			}
@@ -82,7 +85,9 @@ func NewRouter(
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
 		return c.Blob(http.StatusOK, echo.MIMEOctetStream, serializedResponse)
 	}, echojwt.WithConfig(echojwt.Config{
-		KeyFunc: provider.SecretsManager.GetJWTSigningKey,
+		KeyFunc: func(t *jwt.Token) (interface{}, error) {
+			return secrets.GetJWTSigningKey(context.TODO(), provider.SecretsManager, t)
+		},
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return &jwt.RegisteredClaims{}
 		},

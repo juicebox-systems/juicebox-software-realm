@@ -1,6 +1,7 @@
 package records
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/types"
 )
 
 type DynamoDbRecordStore struct {
@@ -34,13 +36,15 @@ func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 
 	svc := dynamodb.New(session)
 
+	tableName := types.JuiceboxRealmDatabasePrefix + realmID.String()
+
 	return &DynamoDbRecordStore{
 		svc:       svc,
-		tableName: realmID.String(),
+		tableName: tableName,
 	}, nil
 }
 
-func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+func (db DynamoDbRecordStore) GetRecord(_ context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
 	userRecord := DefaultUserRecord()
 
 	input := &dynamodb.GetItemInput{
@@ -77,7 +81,7 @@ func (db DynamoDbRecordStore) GetRecord(recordID UserRecordID) (UserRecord, inte
 	return userRecord, serializedUserRecord, nil
 }
 
-func (db DynamoDbRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+func (db DynamoDbRecordStore) WriteRecord(_ context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
 		return err

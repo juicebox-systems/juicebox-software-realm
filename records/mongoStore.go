@@ -3,13 +3,13 @@ package records
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,7 +35,10 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 		return nil, err
 	}
 
-	databaseName := realmID.String()
+	databaseName := types.JuiceboxRealmDatabasePrefix + realmID.String()
+
+	// mongodb urls traditionally end in "/database", so we extract any
+	// provided database name here (stripping the leading "/").
 	if len(url.Path) > 1 {
 		databaseName = url.Path[1:]
 	}
@@ -59,7 +62,7 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 	}, nil
 }
 
-func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
 	userRecord := DefaultUserRecord()
 
 	database := m.client.Database(m.databaseName)
@@ -67,7 +70,7 @@ func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interfac
 
 	var result bson.M
 	err := collection.FindOne(
-		context.Background(),
+		ctx,
 		bson.M{"_id": recordID},
 	).Decode(&result)
 	if err != nil {
@@ -75,13 +78,12 @@ func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interfac
 			// no stored record yet
 			return userRecord, nil, nil
 		}
-		fmt.Printf("what? %+v\n", err)
 		return userRecord, nil, err
 	}
 
 	record, ok := result[serializedUserRecordKey]
 	if !ok {
-		return userRecord, nil, errors.New("secret unexpectedly missing 'secret' key")
+		return userRecord, nil, errors.New("result unexpectedly missing 'serializedUserRecord' key")
 	}
 
 	primitiveBinaryRecord, ok := record.(primitive.Binary)
@@ -99,7 +101,7 @@ func (m MongoRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interfac
 	return userRecord, serializedUserRecord, nil
 }
 
-func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	database := m.client.Database(m.databaseName)
 	collection := database.Collection(userRecordsCollection)
 
@@ -109,7 +111,7 @@ func (m MongoRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, 
 	}
 
 	_, err = collection.UpdateOne(
-		context.Background(),
+		ctx,
 		bson.M{"_id": recordID, serializedUserRecordKey: readRecord},
 		bson.M{
 			"$set": bson.M{

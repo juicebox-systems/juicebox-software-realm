@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/providers"
@@ -61,14 +62,15 @@ mongo:
 	if *idString == "" {
 		randomID, err := uuid.NewRandom()
 		if err != nil {
-			fmt.Printf("%s, exiting...\n", err)
+			fmt.Fprintf(os.Stderr, "%s, exiting...\n", err)
+			os.Exit(1)
 		}
 		realmID = randomID
 	} else {
 		parsedID, err := uuid.Parse(*idString)
 		if err != nil {
-			fmt.Printf("\n%s, exiting...\n", err)
-			return
+			fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
+			os.Exit(2)
 		}
 		realmID = parsedID
 	}
@@ -78,15 +80,16 @@ mongo:
 		if *providerString == "" {
 			providerName = types.Memory
 		} else {
-			fmt.Printf("\n%v, exiting...\n", err)
+			fmt.Fprintf(os.Stderr, "\n%v, exiting...\n", err)
+			os.Exit(3)
 		}
 	}
 
 	provider, err := providers.NewProvider(providerName, realmID)
 	if err != nil {
-		fmt.Printf("\n%s, exiting...\n", err)
-		return
+		fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
+		os.Exit(4)
 	}
 
-	router.NewRouter(realmID, provider, *disableTLS, *port)
+	router.RunRouter(realmID, provider, *disableTLS, *port)
 }

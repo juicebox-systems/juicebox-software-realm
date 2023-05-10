@@ -4,8 +4,11 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/juicebox-software-realm/types"
 	"github.com/stretchr/testify/assert"
 )
+
+var ParseKid = parseKid
 
 func TestParseKid(t *testing.T) {
 	// Valid input
@@ -17,7 +20,7 @@ func TestParseKid(t *testing.T) {
 
 	tenantSecretsKey, version, err := ParseKid(token)
 	assert.NoError(t, err)
-	expectedTenantSecretsKey := "tenant-juicebox"
+	expectedTenantSecretsKey := types.JuiceboxTenantSecretPrefix + "juicebox"
 	expectedVersion := uint64(456)
 	assert.Equal(t, expectedTenantSecretsKey, *tenantSecretsKey)
 	assert.Equal(t, expectedVersion, *version)

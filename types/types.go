@@ -4,14 +4,17 @@ import (
 	"crypto/subtle"
 )
 
-type ProviderName string
+type ProviderName int
 
 const (
-	GCP    ProviderName = "gcp"
-	AWS    ProviderName = "aws"
-	Mongo  ProviderName = "mongo"
-	Memory ProviderName = "memory"
+	GCP ProviderName = iota
+	AWS
+	Mongo
+	Memory
 )
+
+const JuiceboxRealmDatabasePrefix string = "jb-sw-realm-"
+const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"
 
 type Salt [32]byte
 

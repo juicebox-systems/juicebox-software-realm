@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -11,12 +12,27 @@ import (
 	"github.com/juicebox-software-realm/types"
 )
 
+// SecretsManager represents a generic interface into the
+// secrets provider of your choice.
 type SecretsManager interface {
-	GetSecret(name string, version uint64) ([]byte, error)
-	GetJWTSigningKey(token *jwt.Token) (interface{}, error)
+	GetSecret(ctx context.Context, name string, version uint64) ([]byte, error)
 }
 
-func ParseKid(token *jwt.Token) (*string, *uint64, error) {
+func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) ([]byte, error) {
+	name, version, err := parseKid(token)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := sm.GetSecret(ctx, *name, *version)
+	if err != nil {
+		return nil, errors.New("no signing key for jwt")
+	}
+
+	return key, nil
+}
+
+func parseKid(token *jwt.Token) (*string, *uint64, error) {
 	kid, ok := token.Header["kid"]
 	if !ok {
 		return nil, nil, errors.New("jwt missing kid")
@@ -33,7 +49,7 @@ func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 	}
 
 	tenantName := split[0]
-	tenantSecretsKey := "tenant-" + tenantName
+	tenantSecretsKey := types.JuiceboxTenantSecretPrefix + tenantName
 
 	versionString := split[1]
 	version, err := strconv.ParseUint(versionString, 10, 64)

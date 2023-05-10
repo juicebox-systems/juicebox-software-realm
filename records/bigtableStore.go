@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 
 	"cloud.google.com/go/bigtable"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type BigtableRecordStore struct {
@@ -16,8 +18,8 @@ type BigtableRecordStore struct {
 	tableName string
 }
 
-const familyName = "cf1"
-const columnName = "serializedUserRecord"
+const familyName = "f"
+const columnName = "v"
 
 func NewBigtableRecordStore(realmID uuid.UUID) (*BigtableRecordStore, error) {
 	projectID := os.Getenv("GCP_PROJECT_ID")
@@ -36,22 +38,22 @@ func NewBigtableRecordStore(realmID uuid.UUID) (*BigtableRecordStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer admin.Close()
 
-	tableName := realmID.String()
+	tableName := types.JuiceboxRealmDatabasePrefix + realmID.String()
 
-	if err := admin.CreateTable(ctx, tableName); err != nil {
-		if !strings.HasPrefix(err.Error(), "rpc error: code = AlreadyExists") {
+	config := bigtable.TableConf{
+		TableID: tableName,
+		Families: map[string]bigtable.GCPolicy{
+			familyName: bigtable.MaxVersionsPolicy(1),
+		},
+	}
+
+	if err := admin.CreateTableFromConf(ctx, &config); err != nil {
+		if status.Code(err) != codes.AlreadyExists {
 			return nil, err
 		}
 	}
-
-	if err := admin.CreateColumnFamily(ctx, tableName, familyName); err != nil {
-		if !strings.HasPrefix(err.Error(), "rpc error: code = AlreadyExists") {
-			return nil, err
-		}
-	}
-
-	admin.Close()
 
 	client, err := bigtable.NewClient(ctx, projectID, instanceID)
 	if err != nil {
@@ -68,12 +70,12 @@ func (bt BigtableRecordStore) Close() {
 	bt.client.Close()
 }
 
-func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, interface{}, error) {
+func (bt BigtableRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
 	userRecord := DefaultUserRecord()
 
 	table := bt.client.Open(bt.tableName)
 
-	row, err := table.ReadRow(context.Background(), string(recordID))
+	row, err := table.ReadRow(ctx, string(recordID))
 	if err != nil {
 		return userRecord, nil, err
 	}
@@ -89,13 +91,13 @@ func (bt BigtableRecordStore) GetRecord(recordID UserRecordID) (UserRecord, inte
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, readRecord, nil
+		return userRecord, readRecord, err
 	}
 
 	return userRecord, readRecord, nil
 }
 
-func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	table := bt.client.Open(bt.tableName)
 
 	serializedUserRecord, err := cbor.Marshal(record)
@@ -132,7 +134,7 @@ func (bt BigtableRecordStore) WriteRecord(recordID UserRecordID, record UserReco
 	var success bool
 	opt := bigtable.GetCondMutationResult(&success)
 
-	err = table.Apply(context.Background(), string(recordID), conditionalMutation, opt)
+	err = table.Apply(ctx, string(recordID), conditionalMutation, opt)
 	if err != nil {
 		return err
 	}

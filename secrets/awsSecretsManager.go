@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -8,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/golang-jwt/jwt/v4"
 )
 
 type AwsSecretsManager struct {
@@ -35,7 +35,7 @@ func NewAwsSecretsManager() (*AwsSecretsManager, error) {
 	}, nil
 }
 
-func (sm AwsSecretsManager) GetSecret(name string, version uint64) ([]byte, error) {
+func (sm AwsSecretsManager) GetSecret(_ context.Context, name string, version uint64) ([]byte, error) {
 	versionString := fmt.Sprintf("%d", version)
 
 	input := secretsmanager.GetSecretValueInput{
@@ -53,18 +53,4 @@ func (sm AwsSecretsManager) GetSecret(name string, version uint64) ([]byte, erro
 	}
 
 	return []byte(*result.SecretString), nil
-}
-
-func (sm AwsSecretsManager) GetJWTSigningKey(token *jwt.Token) (interface{}, error) {
-	name, version, err := ParseKid(token)
-	if err != nil {
-		return nil, err
-	}
-
-	key, err := sm.GetSecret(*name, *version)
-	if err != nil {
-		return nil, errors.New("no signing key for jwt")
-	}
-
-	return key, nil
 }

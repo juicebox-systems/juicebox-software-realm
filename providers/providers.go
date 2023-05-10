@@ -10,6 +10,8 @@ import (
 	"github.com/juicebox-software-realm/types"
 )
 
+// Provider represents a generic interface into the
+// record and secrets storage of your choice
 type Provider struct {
 	Name           types.ProviderName
 	RecordStore    records.RecordStore
@@ -27,7 +29,7 @@ func Parse(nameString string) (types.ProviderName, error) {
 	case "memory":
 		return types.Memory, nil
 	default:
-		return "", fmt.Errorf("invalid ProviderName: %s", nameString)
+		return -1, fmt.Errorf("invalid ProviderName: %s", nameString)
 	}
 }
 

@@ -1,4 +1,4 @@
-# Advance GCP Instructions
+# Advanced GCP Instructions
 
 The following document outlines advanced instructions for deploying to GCP using the `gcloud` command line tool.
 
@@ -152,7 +152,7 @@ gcloud compute instances create-with-container ${INSTANCE_NAME} \
     --container-env GCP_PROJECT_ID=${GCP_PROJECT_ID},BIGTABLE_INSTANCE_ID=${BIGTABLE_INSTANCE_ID},REALM_ID=${REALM_ID} \
     --tags ${REALM_TAG} \
     --address ${INSTANCE_NAME} \
-    --machine-type n2d-standard-2 \
+    --machine-type e2-standard-2 \
     --zone us-west1-a \
     --scopes https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/bigtable.data,https://www.googleapis.com/auth/bigtable.admin
 ```

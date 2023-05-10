@@ -92,7 +92,7 @@ func TestUnmarshalCBOR(t *testing.T) {
 	data = []byte{0x64, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e}
 	err = record.UnmarshalCBOR(data)
 	assert.Error(t, err)
-	assert.EqualError(t, err, "cbor: cannot unmarshal UTF-8 text string into Go value of type map[interface {}]interface {}")
+	assert.EqualError(t, err, "cbor: cannot unmarshal UTF-8 text string into Go value of type map[string]cbor.RawMessage")
 	assert.Nil(t, record.RegistrationState)
 
 	// Test with an invalid state

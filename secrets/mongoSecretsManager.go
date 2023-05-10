@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -51,13 +50,13 @@ func NewMongoSecretsManager(realmID uuid.UUID) (*MongoSecretsManager, error) {
 	}, nil
 }
 
-func (sm MongoSecretsManager) GetSecret(name string, version uint64) ([]byte, error) {
+func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
 	database := sm.client.Database(sm.databaseName)
 	collection := database.Collection(secretsCollection)
 
 	var result bson.M
 	err := collection.FindOne(
-		context.Background(),
+		ctx,
 		bson.M{"_id": name, secretsVersionKey: version},
 	).Decode(&result)
 	if err != nil {
@@ -77,18 +76,4 @@ func (sm MongoSecretsManager) GetSecret(name string, version uint64) ([]byte, er
 	}
 
 	return nil, errors.New("unexpected secret type")
-}
-
-func (sm MongoSecretsManager) GetJWTSigningKey(token *jwt.Token) (interface{}, error) {
-	name, version, err := ParseKid(token)
-	if err != nil {
-		return nil, err
-	}
-
-	key, err := sm.GetSecret(*name, *version)
-	if err != nil {
-		return nil, errors.New("no signing key for jwt")
-	}
-
-	return key, nil
 }

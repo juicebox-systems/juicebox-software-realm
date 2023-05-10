@@ -34,30 +34,30 @@ var IsEmptyInterface = isEmptyInterface
 func TestIsEmptyInterface(t *testing.T) {
 	// Test with an empty struct
 	empty := struct{}{}
-	assert.True(t, isEmptyInterface(empty))
+	assert.True(t, IsEmptyInterface(empty))
 
 	// Test with a non-empty struct
 	nonEmpty := struct {
 		Name string
 	}{"artemis"}
-	assert.False(t, isEmptyInterface(nonEmpty))
+	assert.False(t, IsEmptyInterface(nonEmpty))
 
 	// Test with a primitive type
-	assert.False(t, isEmptyInterface(42))
+	assert.False(t, IsEmptyInterface(42))
 
 	// Test with a nil value
 	var nilValue interface{}
-	assert.False(t, isEmptyInterface(nilValue))
+	assert.False(t, IsEmptyInterface(nilValue))
 
 	// Test with a struct containing an empty string field
 	structWithEmptyString := struct {
 		Name string
 	}{}
-	assert.True(t, isEmptyInterface(structWithEmptyString))
+	assert.True(t, IsEmptyInterface(structWithEmptyString))
 
 	// Test with a struct containing a non-empty string field
 	structWithNonEmptyString := struct {
 		Name string
 	}{Name: "apollo"}
-	assert.False(t, isEmptyInterface(structWithNonEmptyString))
+	assert.False(t, IsEmptyInterface(structWithNonEmptyString))
 }

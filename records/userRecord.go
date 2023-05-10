@@ -49,22 +49,17 @@ func (ur *UserRecord) MarshalCBOR() ([]byte, error) {
 }
 
 func (ur *UserRecord) UnmarshalCBOR(data []byte) error {
-	var m map[interface{}]interface{}
+	var m map[string]cbor.RawMessage
 	err := cbor.Unmarshal(data, &m)
 	if err != nil {
 		return err
 	}
 
 	for key, value := range m {
-		cborData, err := cbor.Marshal(value)
-		if err != nil {
-			return err
-		}
-
 		switch key {
 		case "Registered":
 			var registered Registered
-			err = cbor.Unmarshal(cborData, &registered)
+			err = cbor.Unmarshal(value, &registered)
 			if err != nil {
 				return err
 			}
