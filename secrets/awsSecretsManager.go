@@ -36,7 +36,7 @@ func NewAwsSecretsManager() (*AwsSecretsManager, error) {
 }
 
 func (sm AwsSecretsManager) GetSecret(_ context.Context, name string, version uint64) ([]byte, error) {
-	versionString := fmt.Sprintf("%d", version)
+	versionString := fmt.Sprint(version)
 
 	input := secretsmanager.GetSecretValueInput{
 		SecretId:     &name,
