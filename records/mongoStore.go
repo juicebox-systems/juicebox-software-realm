@@ -23,6 +23,7 @@ type MongoRecordStore struct {
 
 const userRecordsCollection string = "userRecords"
 const serializedUserRecordKey string = "serializedUserRecord"
+const versionKey string = "version"
 
 func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 	urlString := os.Getenv("MONGO_URL")
@@ -83,22 +84,22 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 
 	record, ok := result[serializedUserRecordKey]
 	if !ok {
-		return userRecord, nil, errors.New("result unexpectedly missing 'serializedUserRecord' key")
+		return userRecord, result, errors.New("result unexpectedly missing 'serializedUserRecord' key")
 	}
 
 	primitiveBinaryRecord, ok := record.(primitive.Binary)
 	if !ok {
-		return userRecord, nil, errors.New("user record was of wrong type")
+		return userRecord, result, errors.New("user record was of wrong type")
 	}
 
 	serializedUserRecord := primitiveBinaryRecord.Data
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		return userRecord, serializedUserRecord, err
+		return userRecord, result, err
 	}
 
-	return userRecord, serializedUserRecord, nil
+	return userRecord, result, nil
 }
 
 func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
@@ -110,16 +111,50 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 		return err
 	}
 
+	// mongo doesn't support unsigned integers, but it supports 64-bit signed
+	// integers. since this version can safely overflow we don't care.
+	var newVersion int64
+	var previousVersion *int64
+
+	// If we read an existing record from the db, try and identify a version for it.
+	// We'll use this version to ensure no-one has mutated this row since we read it.
+	if readRecord != nil {
+		readRecord, ok := readRecord.(primitive.M)
+		if !ok {
+			return errors.New("unexepected type for read record")
+		}
+
+		record, ok := readRecord[versionKey]
+		if !ok {
+			return errors.New("read record unexpectedly missing version attribute")
+		}
+
+		v, ok := record.(int64)
+		if !ok {
+			return errors.New("read record version key was of wrong type")
+		}
+
+		newVersion = v + 1
+		previousVersion = &v
+	}
+
 	_, err = collection.UpdateOne(
 		ctx,
-		bson.M{"_id": recordID, serializedUserRecordKey: readRecord},
+		// lookup a record based on the recordID and previousVersion (or nil version)
+		bson.M{
+			"_id":      recordID,
+			versionKey: previousVersion,
+		},
+		// and set these keys on that record if we find it
 		bson.M{
 			"$set": bson.M{
 				"_id":                   recordID,
 				serializedUserRecordKey: serializedUserRecord,
+				versionKey:              newVersion,
 			},
 		},
-		options.Update().SetUpsert(readRecord == nil),
+		// if we find no record set the keys on a new record if previousVersion was nil
+		options.Update().SetUpsert(previousVersion == nil),
 	)
 
 	if err != nil {
