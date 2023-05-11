@@ -8,22 +8,32 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type MemorySecretsManager struct {
 	secrets map[string]map[uint64][]byte
 }
 
-func NewMemorySecretsManager() (*MemorySecretsManager, error) {
+func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error) {
+	_, span := trace.StartSpan(ctx, "NewMemorySecretsManager")
+	defer span.End()
+
 	secretsJSON := os.Getenv("TENANT_SECRETS")
 	if secretsJSON == "" {
-		return nil, errors.New("unexpectedly missing TENANT_SECRETS")
+		err := errors.New("unexpectedly missing TENANT_SECRETS")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	var unmarshaledSecrets map[string]map[uint64]string
 	err := json.Unmarshal([]byte(secretsJSON), &unmarshaledSecrets)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -33,7 +43,10 @@ func NewMemorySecretsManager() (*MemorySecretsManager, error) {
 
 	for tenantName, versionAndSecrets := range unmarshaledSecrets {
 		if match := regex.MatchString(tenantName); !match {
-			return nil, errors.New("tenant names must be alphanumeric")
+			err := errors.New("tenant names must be alphanumeric")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
 		}
 		prefixedTenantName := types.JuiceboxTenantSecretPrefix + tenantName
 		for version, secret := range versionAndSecrets {
@@ -51,14 +64,23 @@ func NewMemorySecretsManager() (*MemorySecretsManager, error) {
 	}, nil
 }
 
-func (sm MemorySecretsManager) GetSecret(_ context.Context, name string, version uint64) ([]byte, error) {
+func (sm MemorySecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+	_, span := trace.StartSpan(ctx, "GetSecret")
+	defer span.End()
+
 	secretVersions, ok := sm.secrets[name]
 	if !ok {
-		return nil, fmt.Errorf("failed to get secret versions %s", name)
+		err := fmt.Errorf("failed to get secret versions %s", name)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 	secret, ok := secretVersions[version]
 	if !ok {
-		return nil, fmt.Errorf("failed to get secret %s with version %d", name, version)
+		err := fmt.Errorf("failed to get secret %s with version %d", name, version)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 	return secret, nil
 }

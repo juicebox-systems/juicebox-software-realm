@@ -10,7 +10,9 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // SecretsManager represents a generic interface into the
@@ -66,16 +68,23 @@ func parseKid(token *jwt.Token) (*string, *uint64, error) {
 	return &tenantSecretsKey, &version, nil
 }
 
-func NewSecretsManager(provider types.ProviderName, realmID uuid.UUID) (SecretsManager, error) {
+func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (SecretsManager, error) {
+	ctx, span := trace.StartSpan(ctx, "NewSecretsManager")
+	defer span.End()
+
 	switch provider {
 	case types.GCP:
-		return NewGcpSecretsManager()
+		return NewGcpSecretsManager(ctx)
 	case types.Memory:
-		return NewMemorySecretsManager()
+		return NewMemorySecretsManager(ctx)
 	case types.AWS:
-		return NewAwsSecretsManager()
+		return NewAwsSecretsManager(ctx)
 	case types.Mongo:
-		return NewMongoSecretsManager(realmID)
+		return NewMongoSecretsManager(ctx, realmID)
 	}
-	return nil, fmt.Errorf("unexpected provider %v", provider)
+
+	err := fmt.Errorf("unexpected provider %v", provider)
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+	return nil, err
 }

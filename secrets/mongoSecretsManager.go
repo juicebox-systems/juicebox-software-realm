@@ -7,10 +7,14 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type MongoSecretsManager struct {
@@ -22,14 +26,27 @@ const secretsCollection string = "tenantSecrets"
 const secretsVersionKey string = "version"
 const secretsSecretKey string = "secret"
 
-func NewMongoSecretsManager(realmID uuid.UUID) (*MongoSecretsManager, error) {
+func NewMongoSecretsManager(ctx context.Context, realmID uuid.UUID) (*MongoSecretsManager, error) {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"NewMongoSecretsManager",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+	)
+	defer span.End()
+
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
-		return nil, errors.New("unexpectedly missing MONGO_URL")
+		err := errors.New("unexpectedly missing MONGO_URL")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	url, err := url.Parse(urlString)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -39,8 +56,10 @@ func NewMongoSecretsManager(realmID uuid.UUID) (*MongoSecretsManager, error) {
 	}
 
 	clientOptions := options.Client().ApplyURI(urlString)
-	client, err := mongo.Connect(context.Background(), clientOptions)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -51,6 +70,14 @@ func NewMongoSecretsManager(realmID uuid.UUID) (*MongoSecretsManager, error) {
 }
 
 func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"GetSecret",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+	)
+	defer span.End()
+
 	database := sm.client.Database(sm.databaseName)
 	collection := database.Collection(secretsCollection)
 
@@ -60,12 +87,17 @@ func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, versio
 		bson.M{"_id": name, secretsVersionKey: version},
 	).Decode(&result)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
 	secret, ok := result[secretsSecretKey]
 	if !ok {
-		return nil, errors.New("secret unexpectedly missing 'secret' key")
+		err := errors.New("secret unexpectedly missing 'secret' key")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	switch secret := secret.(type) {
@@ -75,5 +107,8 @@ func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, versio
 		return secret.Data, nil
 	}
 
-	return nil, errors.New("unexpected secret type")
+	err = errors.New("unexpected secret type")
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+	return nil, err
 }

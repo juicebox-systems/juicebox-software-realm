@@ -12,7 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type DynamoDbRecordStore struct {
@@ -24,16 +28,29 @@ const primaryKeyName string = "recordId"
 const userRecordAttributeName string = "serializedUserRecord"
 const versionAttributeName string = "version"
 
-func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
+func NewDynamoDbRecordStore(ctx context.Context, realmID uuid.UUID) (*DynamoDbRecordStore, error) {
+	_, span := trace.StartSpan(
+		ctx,
+		"NewDynamoDbRecordStore",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+	)
+	defer span.End()
+
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
-		return nil, errors.New("unexpectedly missing AWS_REGION_NAME")
+		err := errors.New("unexpectedly missing AWS_REGION_NAME")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	session, err := session.NewSession(&aws.Config{
 		Region: &region,
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -48,6 +65,14 @@ func NewDynamoDbRecordStore(realmID uuid.UUID) (*DynamoDbRecordStore, error) {
 }
 
 func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"GetRecord",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+	)
+	defer span.End()
+
 	userRecord := DefaultUserRecord()
 
 	input := &dynamodb.GetItemInput{
@@ -61,6 +86,8 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	result, err := db.svc.GetItemWithContext(ctx, input)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return userRecord, nil, err
 	}
 
@@ -71,13 +98,18 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	attributeValue, ok := result.Item[userRecordAttributeName]
 	if !ok {
-		return userRecord, nil, errors.New("failed to read attribute")
+		err := errors.New("failed to read attribute")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return userRecord, nil, err
 	}
 
 	serializedUserRecord := attributeValue.B
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return userRecord, result.Item, err
 	}
 
@@ -85,8 +117,18 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 }
 
 func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"WriteRecord",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+	)
+	defer span.End()
+
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
@@ -98,20 +140,31 @@ func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 	if readRecord != nil {
 		readRecord, ok := readRecord.(map[string]*dynamodb.AttributeValue)
 		if !ok {
-			return errors.New("unexepected type for read record")
+			err := errors.New("unexepected type for read record")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		versionAttribute, ok := readRecord[versionAttributeName]
 		if !ok {
-			return errors.New("read record unexpectedly missing version attribute")
+			err := errors.New("read record unexpectedly missing version attribute")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		if versionAttribute.N == nil {
-			return errors.New("read record version attribute is unexpected type")
+			err := errors.New("read record version attribute is unexpected type")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		v, err := strconv.ParseUint(*versionAttribute.N, 10, 64)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 
@@ -153,6 +206,8 @@ func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 
 	_, err = db.svc.PutItemWithContext(ctx, input)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 

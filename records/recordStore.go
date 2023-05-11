@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // RecordStore represents a generic interface into the
@@ -20,16 +22,23 @@ type RecordStore interface {
 	WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error
 }
 
-func NewRecordStore(provider types.ProviderName, realmID uuid.UUID) (RecordStore, error) {
+func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (RecordStore, error) {
+	ctx, span := trace.StartSpan(ctx, "NewRecordStore")
+	defer span.End()
+
 	switch provider {
 	case types.GCP:
-		return NewBigtableRecordStore(realmID)
+		return NewBigtableRecordStore(ctx, realmID)
 	case types.Memory:
 		return MemoryRecordStore{}, nil
 	case types.AWS:
-		return NewDynamoDbRecordStore(realmID)
+		return NewDynamoDbRecordStore(ctx, realmID)
 	case types.Mongo:
-		return NewMongoRecordStore(realmID)
+		return NewMongoRecordStore(ctx, realmID)
 	}
-	return nil, fmt.Errorf("unexpected provider %v", provider)
+
+	err := fmt.Errorf("unexpected provider %v", provider)
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+	return nil, err
 }

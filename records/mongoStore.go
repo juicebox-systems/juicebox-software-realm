@@ -8,11 +8,15 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type MongoRecordStore struct {
@@ -24,14 +28,27 @@ const userRecordsCollection string = "userRecords"
 const serializedUserRecordKey string = "serializedUserRecord"
 const versionKey string = "version"
 
-func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
+func NewMongoRecordStore(ctx context.Context, realmID uuid.UUID) (*MongoRecordStore, error) {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"NewMongoRecordStore",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+	)
+	defer span.End()
+
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
-		return nil, errors.New("unexpectedly missing MONGO_URL")
+		err := errors.New("unexpectedly missing MONGO_URL")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	url, err := url.Parse(urlString)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
@@ -44,15 +61,19 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 	}
 
 	clientOptions := options.Client().ApplyURI(urlString)
-	client, err := mongo.Connect(context.Background(), clientOptions)
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
-	err = client.Database(databaseName).CreateCollection(context.Background(), userRecordsCollection)
+	err = client.Database(databaseName).CreateCollection(ctx, userRecordsCollection)
 	if err != nil {
 		// ignore the "NamespaceExists" error code
 		if mErr, ok := err.(mongo.CommandError); !ok || !mErr.HasErrorCode(48) {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
@@ -64,6 +85,14 @@ func NewMongoRecordStore(realmID uuid.UUID) (*MongoRecordStore, error) {
 }
 
 func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"GetRecord",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+	)
+	defer span.End()
+
 	userRecord := DefaultUserRecord()
 
 	database := m.client.Database(m.databaseName)
@@ -79,23 +108,33 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 			// no stored record yet
 			return userRecord, nil, nil
 		}
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return userRecord, nil, err
 	}
 
 	record, ok := result[serializedUserRecordKey]
 	if !ok {
-		return userRecord, result, errors.New("result unexpectedly missing 'serializedUserRecord' key")
+		err := errors.New("result unexpectedly missing 'serializedUserRecord' key")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return userRecord, result, err
 	}
 
 	primitiveBinaryRecord, ok := record.(primitive.Binary)
 	if !ok {
-		return userRecord, result, errors.New("user record was of wrong type")
+		err := errors.New("user record was of wrong type")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return userRecord, result, err
 	}
 
 	serializedUserRecord := primitiveBinaryRecord.Data
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return userRecord, result, err
 	}
 
@@ -103,11 +142,21 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 }
 
 func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+	ctx, span := trace.StartSpan(
+		ctx,
+		"WriteRecord",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+	)
+	defer span.End()
+
 	database := m.client.Database(m.databaseName)
 	collection := database.Collection(userRecordsCollection)
 
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
@@ -121,17 +170,26 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 	if readRecord != nil {
 		readRecord, ok := readRecord.(primitive.M)
 		if !ok {
-			return errors.New("unexepected type for read record")
+			err := errors.New("unexepected type for read record")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		record, ok := readRecord[versionKey]
 		if !ok {
-			return errors.New("read record unexpectedly missing version attribute")
+			err := errors.New("read record unexpectedly missing version attribute")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		v, ok := record.(int64)
 		if !ok {
-			return errors.New("read record version key was of wrong type")
+			err := errors.New("read record version key was of wrong type")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
 		}
 
 		newVersion = v + 1
@@ -158,6 +216,8 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 	)
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 

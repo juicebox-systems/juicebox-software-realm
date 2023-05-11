@@ -15,5 +15,19 @@ services:
       MONGO_URL:
       TENANT_SECRETS: '{"test":{"1":"an-auth-token-key"}}'
       LETS_ENCRYPT_CACHE: /var/cache/letsencrypt
+      OPENTELEMETRY_ENDPOINT: opentelemetry:4317
     volumes:
       - /var/cache/letsencrypt:/var/cache/letsencrypt
+  opentelemetry:
+    image: otel/opentelemetry-collector-contrib:0.77.0
+    command: [--config=/etc/otel-collector-config.yaml]
+    links:
+     - jb-sw-realm
+    environment:
+      DD_API_KEY:
+      DD_SITE: us5.datadoghq.com
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - /proc:/hostfs/proc:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock

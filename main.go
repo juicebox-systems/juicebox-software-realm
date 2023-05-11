@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/router"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 )
 
@@ -98,7 +100,16 @@ memory:
 		}
 	}
 
-	provider, err := providers.NewProvider(providerName, realmID)
+	ctx := context.Background()
+
+	tp := trace.InitTraceProvider(ctx, realmID)
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "Error shutting down tracer provider: %v", err)
+		}
+	}()
+
+	provider, err := providers.NewProvider(ctx, providerName, realmID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
 		os.Exit(4)

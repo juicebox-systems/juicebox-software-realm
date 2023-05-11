@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/cloudflare/circl/group"
 	"github.com/cloudflare/circl/oprf"
@@ -19,10 +20,14 @@ import (
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
+	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/blake2s"
 )
@@ -39,6 +44,7 @@ func RunRouter(
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.BodyLimit("2K"))
+	e.Use(otelecho.Middleware("echo-router"))
 
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID})
@@ -56,7 +62,7 @@ func RunRouter(
 			return contextAwareError(c, http.StatusBadRequest, "Error unmarshalling request body")
 		}
 
-		userRecordID, err := userRecordID(c)
+		userRecordID, tenantID, err := userRecordID(c)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error reading user from jwt")
 		}
@@ -66,7 +72,7 @@ func RunRouter(
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading from record store")
 		}
 
-		response, updatedUserRecord, err := handleRequest(userRecord, request)
+		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error processing request")
 		}
@@ -107,34 +113,38 @@ func RunRouter(
 	}
 }
 
-func userRecordID(c echo.Context) (*records.UserRecordID, error) {
+func userRecordID(c echo.Context) (*records.UserRecordID, *string, error) {
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok {
-		return nil, errors.New("user is not a jwt token")
+		return nil, nil, errors.New("user is not a jwt token")
 	}
 
 	claims, ok := user.Claims.(*jwt.RegisteredClaims)
 	if !ok {
-		return nil, errors.New("jwt claims of unexpected type")
+		return nil, nil, errors.New("jwt claims of unexpected type")
 	}
 
 	if claims.Subject == "" {
-		return nil, errors.New("jwt claims missing 'sub' field")
+		return nil, nil, errors.New("jwt claims missing 'sub' field")
 	}
 	userID := claims.Subject
 
 	if claims.Issuer == "" {
-		return nil, errors.New("jwt claims missing 'iss' field")
+		return nil, nil, errors.New("jwt claims missing 'iss' field")
 	}
 	tenantID := claims.Issuer
 
 	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantID, userID)))
 	userRecordID := records.UserRecordID(hex.EncodeToString(hash[:]))
 
-	return &userRecordID, nil
+	return &userRecordID, &tenantID, nil
 }
 
-func handleRequest(record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
+func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
+	_, span := trace.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
+	defer span.End()
+	span.SetAttributes(attribute.KeyValue{Key: "tenant", Value: attribute.StringValue(tenantID)})
+
 	switch payload := request.Payload.(type) {
 	case requests.Register1:
 		return &responses.SecretsResponse{
@@ -198,20 +208,34 @@ func handleRequest(record records.UserRecord, request requests.SecretsRequest) (
 			record.RegistrationState = state
 
 			key := oprf.PrivateKey{}
-			key.UnmarshalBinary(oprf.SuiteRistretto255, state.OprfKey[:])
+			err := key.UnmarshalBinary(oprf.SuiteRistretto255, state.OprfKey[:])
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, &record, err
+			}
 
-			blindedPin := group.Ristretto255.NewElement()
-			blindedPin.UnmarshalBinary(payload.BlindedOprfInput[:])
+			blindedElement := group.Ristretto255.NewElement()
+			err = blindedElement.UnmarshalBinary(payload.BlindedOprfInput[:])
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return nil, &record, err
+			}
 
 			server := oprf.NewServer(oprf.SuiteRistretto255, &key)
-			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedPin}}
+			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedElement}}
 			blindedOprfResult, err := server.Evaluate(&req)
 			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
 			serializedBlindedOprfResult, err := blindedOprfResult.Elements[0].MarshalBinary()
 			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
