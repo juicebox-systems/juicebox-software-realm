@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"reflect"
 
 	"github.com/cloudflare/circl/group"
@@ -28,15 +27,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/blake2s"
 )
 
 func RunRouter(
 	realmID uuid.UUID,
 	provider *providers.Provider,
-	disableTLS bool,
-	port int,
+	port uint64,
 ) {
 	e := echo.New()
 	e.HideBanner = true
@@ -100,17 +97,7 @@ func RunRouter(
 		},
 	}))
 
-	if disableTLS {
-		e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
-	} else {
-		cache := os.Getenv("LETS_ENCRYPT_CACHE")
-		if cache != "" {
-			e.AutoTLSManager.Cache = autocert.DirCache(cache)
-		} else {
-			panic("missing LETS_ENCRYPT_CACHE environment configuration")
-		}
-		e.Logger.Fatal(e.StartAutoTLS(fmt.Sprintf(":%d", port)))
-	}
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
 func userRecordID(c echo.Context) (*records.UserRecordID, *string, error) {

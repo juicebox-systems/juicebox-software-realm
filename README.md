@@ -58,10 +58,67 @@ This software is setup to be portable to the cloud provider of your choice.
 In order to run a realm you will generally need to:
 1. Clone this repo
 2. Choose a provider to manage your data
-3. Build a docker image configured with that provider
-4. Run the docker image within the provider of your choice, such as a GCP VM or AWS EC2
-5. Instantiate your database, such as GCP Bigtable or AWS DynamoDB
-6. Store your tenant secrets #todo explain more about this
-7. Configure your DNS to point to your instance
+3. Initialize the provider environment with Terraform
+4. Upload the realm software you to your provider
 
-For more detailed instructions for the provider of your choice, see [GCP](GCP.md) or [AWS](#todo).
+## Tenant Auth Secrets
+
+Realm software is structured to operate in a multi-tenant environment. In order to validate access from different tenants, your realm will need access to the JWT signing key for each tenant you plan to support. You may add support for additional tenants at any time in the future.
+
+In general, regardless of provider, tenant secrets are stored in the following fashion:
+
+```json
+{
+	"jb-sw-tenant-{{yourTenantName}}": {"{{yourKeyVersionNumber}}": "{{yourSigningKey}}"},
+	"jb-sw-tenant-juicebox": {"1": "juicebox-tenant-secret"},
+}
+```
+
+Note: Tenant names should be unique alphanumeric strings. Key versions should be non-negative integer values.
+
+The realm software will determine which tenant key to validate on a request by accessing the "kid" header field on a received JWT auth token. This field will be provided in the format of `tenantName:1`.
+
+## GCP
+
+The following instructions will help you quickly deploy a realm to Google's App Engine Flex.
+
+Before you begin, setup a project for your realm to run in on console.cloud.google.com and make note of its ID.
+
+Next, setup your project environment with terraform as follows:
+```sh
+cd gcp
+terraform init
+terraform plan -var='tenant_secrets={"juicebox":"juicebox-tenant-key","anotherTenant":"another-tenant-key"}'
+terraform apply -var='tenant_secrets={"juicebox":"juicebox-tenant-key","anotherTenant":"another-tenant-key"}'
+```
+
+Note: you should update the tenant secrets `var` to reflect the actual secrets you wish to support.
+
+After terraform has finished configuring your project environment, you should see an output like follows:
+```sh
+BIGTABLE_INSTANCE_ID = "jb-sw-realms"
+GCP_PROJECT_ID = "your-project-id"
+REALM_ID = "99b2da84-b707-6203-dc35-804bbbcb8cba"
+SERVICE_ACCOUNT = "jb-sw-realms@your-project-id.iam.gserviceaccount.com"
+```
+
+Open the `app.yaml` in this directory and configure it with these values where appropriate, for example:
+Replace `{{YOUR_BIGTABLE_INSTANCE_ID}}` with `jb-sw-realms`.
+
+Finally, you can deploy the realm software by running the following command from the root of the repo:
+```sh
+gcloud app deploy --project {{YOUR_GCP_PROJECT_ID}}
+```
+
+Note: you will need to have the `gcloud` command line tools installed to execute this command. You can find instructions on installing these [here](https://cloud.google.com/sdk/docs/install).
+
+This may take a few minutes, but upon success you should be able to access your realm at:
+https://{{YOUR_GCP_PROJECT_ID}}.wl.r.appspot.com
+
+If all was successful, you'll see a page render that looks something like:
+```json
+{"realmID":"99b2da84-b707-6203-dc35-804bbbcb8cba"}
+```
+
+If you wish to configure a custom domain for your new realm, visit:
+https://console.cloud.google.com/appengine/settings/domains

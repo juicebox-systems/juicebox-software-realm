@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/providers"
@@ -23,15 +24,10 @@ We recommend using a UUID, but any 16-byte hex string is valid.
 
 Note: Changing this id for an existing realm will result in data loss.`,
 	)
-	disableTLS := flag.Bool(
-		"disable-tls",
-		false,
-		"Set this flag to insecurely run the server without TLS.",
-	)
-	port := flag.Int(
+	port := flag.Uint64(
 		"port",
-		443,
-		"The port to run the server on.",
+		0,
+		"The port to run the server on. (default 8080)",
 	)
 	providerString := flag.String(
 		"provider",
@@ -86,6 +82,19 @@ memory:
 		realmID = parsedID
 	}
 
+	if envPortString := os.Getenv("PORT"); envPortString != "" && *port == 0 {
+		envPort, err := strconv.ParseUint(envPortString, 10, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "\nInvalid PORT env: %s, exiting...\n", err)
+			os.Exit(4)
+		}
+		port = &envPort
+	}
+
+	if *port == 0 {
+		*port = 8080
+	}
+
 	if envProvider := os.Getenv("PROVIDER"); envProvider != "" && *providerString == "" {
 		providerString = &envProvider
 	}
@@ -115,5 +124,5 @@ memory:
 		os.Exit(4)
 	}
 
-	router.RunRouter(realmID, provider, *disableTLS, *port)
+	router.RunRouter(realmID, provider, *port)
 }

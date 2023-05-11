@@ -205,7 +205,7 @@ gcloud bigtable instances add-iam-policy-binding ${BIGTABLE_INSTANCE_ID} \
 And to grant access to the secret you created, you can run the following command:
 
 ```sh
-gcloud secrets add-iam-policy-binding tenant-${TENANT_NAME} \
+gcloud secrets add-iam-policy-binding jb-sw-tenant-${TENANT_NAME} \
     --member=serviceAccount:${SERVICE_ACCOUNT_EMAIL} \
     --role=roles/secretmanager.secretAccessor
 ```

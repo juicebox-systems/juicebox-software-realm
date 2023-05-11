@@ -15,6 +15,6 @@ RUN go mod download
 
 RUN CGO_ENABLED=0 go build -o /jb-sw-realm
 
-EXPOSE 443
+EXPOSE 8080
 
-CMD /jb-sw-realm -port 443 ${DISABLE_TLS:+-disable-tls}
+CMD /jb-sw-realm
