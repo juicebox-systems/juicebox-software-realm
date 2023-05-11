@@ -119,7 +119,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 		}
 
 		// the "Column" field actually contains family:column
-		readColumnName := strings.Replace(readRecord.Column, familyName+":", "", 1)
+		readColumnName := strings.TrimPrefix(readRecord.Column, familyName+":")
 
 		previousVersion, err := strconv.ParseUint(readColumnName, 10, 64)
 		if err != nil {
@@ -127,8 +127,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 		}
 
 		newVersion = previousVersion + 1
-		previousVersionString := fmt.Sprint(previousVersion)
-		previousColumnName = &previousVersionString
+		previousColumnName = &readColumnName
 	}
 
 	columnName := fmt.Sprint(newVersion)
