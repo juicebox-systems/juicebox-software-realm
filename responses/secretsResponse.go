@@ -40,17 +40,9 @@ func (sr *SecretsResponse) MarshalCBOR() ([]byte, error) {
 }
 
 func isEmptyInterface(s interface{}) bool {
-	v := reflect.ValueOf(s)
-	if v.Kind() != reflect.Struct {
+	if s == nil {
 		return false
 	}
-
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		if !field.IsZero() {
-			return false
-		}
-	}
-
-	return true
+	zero := reflect.Zero(reflect.TypeOf(s))
+	return reflect.DeepEqual(zero.Interface(), s)
 }
