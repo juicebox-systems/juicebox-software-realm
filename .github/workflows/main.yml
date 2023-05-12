@@ -37,5 +37,8 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
 
-      - name: Run Tests
+      - name: Run go test
         run: go test -v ./...
+
+      - name: Run go mod tidy
+        run: go mod tidy && git diff --quiet
