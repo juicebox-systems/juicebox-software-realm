@@ -8,8 +8,6 @@ We recommend adding at least one software backed realm to your configuration alo
 
 ```
 Usage of jb-sw-realm:
-  -disable-tls
-    	Set this flag to insecurely run the server without TLS.
   -id string
     	A 16-byte hex string identifying this realm. (default random)
 
@@ -17,7 +15,7 @@ Usage of jb-sw-realm:
 
     	Note: Changing this id for an existing realm will result in data loss.
   -port int
-    	The port to run the server on. (default 443)
+    	The port to run the server on. (default 8080)
   -provider string
     	The provider to use. [gcs|aws|mongo|memory] (default "memory")
 
@@ -69,12 +67,12 @@ In general, regardless of provider, tenant secrets are stored in the following f
 
 ```json
 {
-	"jb-sw-tenant-{{yourTenantName}}": {"{{yourKeyVersionNumber}}": "{{yourSigningKey}}"},
-	"jb-sw-tenant-juicebox": {"1": "juicebox-tenant-secret"},
+	"jb-sw-tenant-{{yourTenantName}}": "{{yourSigningKey}}",
+	"jb-sw-tenant-acme": "acme-tenant-secret",
 }
 ```
 
-Note: Tenant names should be unique alphanumeric strings. Key versions should be non-negative integer values.
+Note: Tenant names should be unique alphanumeric strings. Key versions should be non-negative integer values, which are generally incremented when you upload a new key for a tenant.
 
 The realm software will determine which tenant key to validate on a request by accessing the "kid" header field on a received JWT auth token. This field will be provided in the format of `tenantName:1`.
 
@@ -82,14 +80,14 @@ The realm software will determine which tenant key to validate on a request by a
 
 The following instructions will help you quickly deploy a realm to Google's App Engine Flex.
 
-Before you begin, setup a project for your realm to run in on console.cloud.google.com and make note of its ID.
+Before you begin, setup a project for your realm to run in on [console.cloud.google.com](https://console.cloud.google.com) and make note of its ID.
 
 Next, setup your project environment with terraform as follows:
 ```sh
 cd gcp
 terraform init
-terraform plan -var='tenant_secrets={"juicebox":"juicebox-tenant-key","anotherTenant":"another-tenant-key"}'
-terraform apply -var='tenant_secrets={"juicebox":"juicebox-tenant-key","anotherTenant":"another-tenant-key"}'
+terraform plan -var='tenant_secrets={"acme":"acme-tenant-key","anotherTenant":"another-tenant-key"}'
+terraform apply -var='tenant_secrets={"acme":"acme-tenant-key","anotherTenant":"another-tenant-key"}'
 ```
 
 Note: you should update the tenant secrets `var` to reflect the actual secrets you wish to support.
