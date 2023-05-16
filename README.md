@@ -120,3 +120,68 @@ If all was successful, you'll see a page render that looks something like:
 
 If you wish to configure a custom domain for your new realm, visit:
 https://console.cloud.google.com/appengine/settings/domains
+
+## AWS
+
+The following instructions will help you quickly deploy a realm to Amazon's Elastic Beanstalk.
+
+To begin, initialize your environment with terraform as follows:
+```sh
+cd aws
+terraform init
+terraform plan -var='tenant_secrets={"acme":"acme-tenant-key","anotherTenant":"another-tenant-key"}'
+terraform apply -var='tenant_secrets={"acme":"acme-tenant-key","anotherTenant":"another-tenant-key"}'
+```
+
+Note: you should update the tenant secrets `var` to reflect the actual secrets you wish to support.
+
+After terraform has finished configuring your project environment, you should see an output like follows:
+```sh
+CLOUDFRONT_DOMAIN = "https://d1oivazt933sey.cloudfront.net"
+```
+
+You can view your newly deploy Elastic Beanstalk environment at the returned URL, but for now it's just going to render an example application.
+
+To deploy the realm software and replace the example site, you'll need to install the `eb` command line tools. You can find instructions on how to install these [here](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install.html).
+
+Once installed, from the root of the repo run the command:
+```sh
+eb init
+```
+
+You will be presented with a number of prompts. In general, you can select the default options *except* for the following questions:
+1. Use the region you selected in Terraform
+2. Choose the existing "jb-sw-realm" as the application to use
+3. Choose the existing "jb-sw-realm" as the environment to use
+
+Once initialized, you can now deploy the realm software by running the following command from the root of the repo:
+```sh
+eb deploy jb-sw-realm
+```
+
+This may take a few minutes, but upon success you should be able to access your realm using the URL returned by terraform earlier.
+
+If all was successful, you'll see a page render that looks something like:
+```json
+{"realmID":"99b2da84-b707-6203-dc35-804bbbcb8cba"}
+```
+
+To finish setup and start using your realm, you will want to configure your CloudFront distribution with a custom domain. You can do so by visiting:
+https://console.aws.amazon.com/cloudfront
+
+## Other Providers
+
+If you'd like to host a realm on another provider, or with a configuration other than the ones described above, you will need to choose a provider and manually configure your environent.
+
+For your convenience, a Dockerfile is provided that can run a realm on most hosting platforms once properly configured.
+
+The available configuration variables, beyond the args on the `jb-sw-realm` binary are as follows:
+
+* **REALM_ID**: A unique ID representing your realm. This is ignored if the `-id` flag is specified.
+* **PROVIDER**: The provider you wish to use [gcp|aws|mongo|memory]. This is ignored if the `-provider` flag is specified.
+* **BIGTABLE_INSTANCE_ID**: The id of your bigtable instance in GCP. This is only read when using the `GCP` provider.
+* **GCP_PROJECT_ID**: The id of your project in GCP. This is only read when using the `GCP` provider.
+* **AWS_REGION_NAME**: The name of your region in AWS. This is only read when using the `AWS` provider.
+* **MONGO_URL**: The fully qualified URL to your mongo database, such as `mongodb://username:password@host:port/database`. This is only read when using the `Mongo` provider.
+* **TENANT_SECRETS**: A list of versioned tenant secrets in the form of `'{"test":{"1":"an-auth-token-key"}}'`. This is only used if the `memory` provider is specified.
+* **OPENTELEMETRY_ENDPOINT**: The URL to an OpenTelemetry gRPC service where tracing data should be sent.

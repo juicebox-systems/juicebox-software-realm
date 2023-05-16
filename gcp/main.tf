@@ -1,7 +1,7 @@
 # Configure the Google Cloud provider
 provider "google" {
-  project     = var.project_id
-  region      = var.region
+  project = var.project_id
+  region  = var.region
 }
 
 # Enable required APIs
@@ -22,7 +22,7 @@ resource "google_service_account" "service_account" {
 
 # Create each tenant secret
 resource "google_secret_manager_secret" "secret" {
-  for_each = var.tenant_secrets
+  for_each  = var.tenant_secrets
   project   = var.project_id
   secret_id = "jb-sw-tenant-${each.key}"
   replication {
@@ -56,12 +56,12 @@ resource "google_bigtable_instance" "instance" {
   display_name = "Juicebox Software Realms"
 
   cluster {
-    cluster_id   = "jb-sw-realms-cluster"
-    zone         = var.zone
+    cluster_id = "jb-sw-realms-cluster"
+    zone       = var.zone
     autoscaling_config {
-        min_nodes  = 1
-        max_nodes  = 5
-        cpu_target = 80
+      min_nodes  = 1
+      max_nodes  = 5
+      cpu_target = 80
     }
   }
 }
@@ -79,24 +79,24 @@ resource "google_bigtable_instance_iam_binding" "access" {
 
 # Create App Engine application
 resource "google_app_engine_application" "app" {
-  project         = var.project_id
-  location_id     = var.region
+  project     = var.project_id
+  location_id = var.region
 }
 
 # Grant log writer permissions to app engine
 resource "google_project_iam_binding" "logs_writer_binding" {
-  project       = var.project_id
-  role          = "roles/logging.logWriter"
-  members       = [
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  members = [
     "serviceAccount:${google_service_account.service_account.email}"
   ]
 }
 
 # Grant object reader permissions to app engine so it can access Google Container Registry
 resource "google_project_iam_binding" "storage_object_viewer_binding" {
-  project       = var.project_id
-  role          = "roles/storage.objectViewer"
-  members       = [
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  members = [
     "serviceAccount:${google_service_account.service_account.email}"
   ]
 }

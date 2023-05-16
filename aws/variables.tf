@@ -1,23 +1,12 @@
-variable "project_id" {
-  description = "Google Cloud Project ID"
-  type        = string
-}
-
 variable "realm_id" {
   description = "A UUID that identifies your realm"
   type        = string
 }
 
 variable "region" {
-  description = "Google Cloud Region"
+  description = "AWS Region"
   type        = string
-  default     = "us-west2"
-}
-
-variable "zone" {
-  description = "Google Cloud Zone"
-  type        = string
-  default     = "us-west2-a"
+  default     = "us-east-1"
 }
 
 variable "tenant_secrets" {
