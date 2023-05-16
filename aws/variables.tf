@@ -1,6 +1,6 @@
 variable "realm_id" {
-    description = "A UUID that identifies your realm"
-    type        = string
+  description = "A UUID that identifies your realm"
+  type        = string
 }
 
 variable "region" {

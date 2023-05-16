@@ -4,8 +4,8 @@ variable "project_id" {
 }
 
 variable "realm_id" {
-    description = "A UUID that identifies your realm"
-    type        = string
+  description = "A UUID that identifies your realm"
+  type        = string
 }
 
 variable "region" {
@@ -22,5 +22,5 @@ variable "zone" {
 
 variable "tenant_secrets" {
   description = "The names of any tenants you will be allowing access to (alphanumeric) mapped to their auth signing key. Read the 'Tenant Auth Secrets' section of the README for more details."
-  type = map(string)
+  type        = map(string)
 }

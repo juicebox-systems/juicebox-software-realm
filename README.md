@@ -140,7 +140,7 @@ After terraform has finished configuring your project environment, you should se
 CLOUDFRONT_DOMAIN = "https://d1oivazt933sey.cloudfront.net"
 ```
 
-You can view your newly deploy EBS environment at the returned URL, but for now it's just going to render an example application.
+You can view your newly deploy Elastic Beanstalk environment at the returned URL, but for now it's just going to render an example application.
 
 To deploy the realm software and replace the example site, you'll need to install the `eb` command line tools. You can find instructions on how to install these [here](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install.html).
 
