@@ -185,3 +185,25 @@ The available configuration variables, beyond the args on the `jb-sw-realm` bina
 * **MONGO_URL**: The fully qualified URL to your mongo database, such as `mongodb://username:password@host:port/database`. This is only read when using the `Mongo` provider.
 * **TENANT_SECRETS**: A list of versioned tenant secrets in the form of `'{"test":{"1":"an-auth-token-key"}}'`. This is only used if the `memory` provider is specified.
 * **OPENTELEMETRY_ENDPOINT**: The URL to an OpenTelemetry gRPC service where tracing data should be sent.
+
+## Metrics and Tracing
+
+If you want to gather metrics and tracing information from your realm, it is configured to report to a GRPC server at `OPENTELEMETRY_ENDPOINT`. The `Dockerfile` in this repo is configured to launch `jb-sw-realm` alongside an Open Telemetry Collector, which is one way you can gather this info. You can edit the `otel-collector-config.yml` to customize the export settings to your liking – by default, it expects a `DD_API_KEY` and `DD_SITE` environment variable to export to Datadog.
+
+### GCP
+
+To deploy to App Engine Flex with tracing enabled, you can deploy a docker image instead of allowing Google to build an image for you. You will need to set up a repository in Artifact Registry to push your image to.
+
+This looks something like the following:
+```sh
+docker build --platform=linux/amd64 -t jb-sw-realm .
+docker tag jb-sw-realm us-west1-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY_NAME}/jb-sw-realm
+docker push us-west1-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY_NAME}/jb-sw-realm
+gcloud app deploy --appyaml=app.yaml --image-url=us-west1-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPOSITORY_NAME}/jb-sw-realm
+```
+
+Note: Make sure to configure `OPENTELEMETRY_ENDPOINT` to `localhost:4317` in your `app.yaml` as well as adding any other environment parameters you need, such as `DD_API_KEY`.
+
+### AWS
+
+To deploy to Elastic Beanstalk with tracing enabled, you can update your environment to use the Docker solution stack instead of the Go solution stack. Additionally, you will need to define the appropriate additional environment properties on your configuration.

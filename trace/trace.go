@@ -22,9 +22,15 @@ func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) 
 }
 
 func InitTraceProvider(ctx context.Context, realmID uuid.UUID) *sdktrace.TracerProvider {
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("error querying hostname: %+v", err)
+	}
+
 	resource := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName("jb-sw-realm"),
+		attribute.String("host", hostname),
 		attribute.String("realm_id", realmID.String()),
 	)
 
