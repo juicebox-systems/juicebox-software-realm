@@ -23,9 +23,8 @@ func TestHandleRequest(t *testing.T) {
 	c := e.NewContext(&r, nil)
 	tenantID := "test"
 
-	oprfKey := types.OprfKey{0xf5, 0xa9, 0x9e, 0x3e, 0xf0, 0x9f, 0x0b, 0x6b, 0xbc, 0x89, 0x21, 0x82, 0x7f, 0x32, 0xe8, 0x8e, 0x96, 0xbe, 0x30, 0x6c, 0x76, 0x6c, 0x89, 0xf7, 0xa8, 0xfa, 0xba, 0xae, 0xc2, 0xed, 0x16, 0x0c}
 	oprfBlindedInput := types.OprfBlindedInput{0xe6, 0x92, 0xd0, 0xf3, 0x22, 0x96, 0xe9, 0x01, 0x97, 0xf4, 0x55, 0x7c, 0x74, 0x42, 0x99, 0xd2, 0x3e, 0x1d, 0xc2, 0x6c, 0xda, 0x1a, 0xea, 0x5a, 0xa7, 0x54, 0xb4, 0x6c, 0xee, 0x59, 0x55, 0x7c}
-	oprfBlindedResult := types.OprfBlindedResult{0x40, 0x1b, 0x49, 0x14, 0x43, 0x34, 0xa2, 0x09, 0x3d, 0xac, 0xf6, 0xbd, 0x5c, 0xc2, 0x54, 0x0d, 0x66, 0x6a, 0x14, 0xc4, 0x18, 0x79, 0x71, 0x2e, 0xfb, 0xe9, 0xb0, 0x1d, 0x85, 0x65, 0xa1, 0x57}
+	oprfBlindedResult := types.OprfBlindedResult{0xee, 0x8d, 0x91, 0x39, 0xf7, 0x3e, 0xe8, 0x5, 0x99, 0xb7, 0x19, 0x4a, 0x15, 0x57, 0x2d, 0x88, 0x38, 0xb9, 0x31, 0x41, 0x13, 0x29, 0x99, 0x57, 0xa7, 0x48, 0x25, 0x1a, 0xf9, 0x6a, 0x76, 0x27}
 
 	userRecord := records.UserRecord{
 		RegistrationState: records.NotRegistered{},
@@ -46,7 +45,7 @@ func TestHandleRequest(t *testing.T) {
 	// Register 2
 	request.Payload = requests.Register2{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
@@ -54,7 +53,7 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedUserRecord.RegistrationState = records.Registered{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
@@ -92,7 +91,7 @@ func TestHandleRequest(t *testing.T) {
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
@@ -116,7 +115,7 @@ func TestHandleRequest(t *testing.T) {
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
@@ -139,7 +138,7 @@ func TestHandleRequest(t *testing.T) {
 	expectedResponse.Status = responses.BadUnlockTag
 	expectedUserRecord.RegistrationState = records.Registered{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
@@ -153,7 +152,7 @@ func TestHandleRequest(t *testing.T) {
 
 	userRecord.RegistrationState = records.Registered{
 		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
-		OprfKey:        oprfKey,
+		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
 		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),

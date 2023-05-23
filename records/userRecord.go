@@ -16,7 +16,7 @@ type UserRecord struct {
 }
 
 type Registered struct {
-	OprfKey        types.OprfKey        `cbor:"oprf_key"`
+	OprfSeed       types.OprfSeed       `cbor:"oprf_seed"`
 	Salt           types.Salt           `cbor:"salt"`
 	MaskedTgkShare types.MaskedTgkShare `cbor:"masked_tgk_share"`
 	SecretShare    types.SecretShare    `cbor:"secret_share"`

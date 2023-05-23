@@ -145,7 +145,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 		}, nil, nil
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
-			OprfKey:        payload.OprfKey,
+			OprfSeed:       payload.OprfSeed,
 			Salt:           payload.Salt,
 			MaskedTgkShare: payload.MaskedTgkShare,
 			SecretShare:    payload.SecretShare,
@@ -199,8 +199,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			key := oprf.PrivateKey{}
-			err := key.UnmarshalBinary(oprf.SuiteRistretto255, state.OprfKey[:])
+			key, err := oprf.DeriveKey(oprf.SuiteRistretto255, oprf.BaseMode, state.OprfSeed[:], []byte("juicebox-oprf"))
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
@@ -215,7 +214,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 				return nil, &record, err
 			}
 
-			server := oprf.NewServer(oprf.SuiteRistretto255, &key)
+			server := oprf.NewServer(oprf.SuiteRistretto255, key)
 			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedElement}}
 			blindedOprfResult, err := server.Evaluate(&req)
 			if err != nil {

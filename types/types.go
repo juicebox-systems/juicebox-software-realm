@@ -18,7 +18,7 @@ const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"
 
 type Salt [32]byte
 
-type OprfKey [32]byte
+type OprfSeed [32]byte
 type OprfBlindedInput [32]byte
 type OprfBlindedResult [32]byte
 

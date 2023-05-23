@@ -8,7 +8,7 @@ type Register1 struct{}
 
 type Register2 struct {
 	Salt           types.Salt
-	OprfKey        types.OprfKey        `cbor:"oprf_key"`
+	OprfSeed       types.OprfSeed       `cbor:"oprf_seed"`
 	UnlockTag      types.UnlockTag      `cbor:"tag"`
 	MaskedTgkShare types.MaskedTgkShare `cbor:"masked_tgk_share"`
 	SecretShare    types.SecretShare    `cbor:"secret_share"`
