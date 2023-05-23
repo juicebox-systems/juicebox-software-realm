@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/cloudflare/circl/group"
 	"github.com/cloudflare/circl/oprf"
@@ -48,6 +49,11 @@ func RunRouter(
 	})
 
 	e.POST("/req", func(c echo.Context) error {
+		userRecordID, tenantID, err := userRecordID(c, realmID)
+		if err != nil {
+			return contextAwareError(c, http.StatusUnauthorized, "Error reading user from jwt")
+		}
+
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading request body")
@@ -57,11 +63,6 @@ func RunRouter(
 		err = cbor.Unmarshal(body, &request)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error unmarshalling request body")
-		}
-
-		userRecordID, tenantID, err := userRecordID(c)
-		if err != nil {
-			return contextAwareError(c, http.StatusBadRequest, "Error reading user from jwt")
 		}
 
 		userRecord, readRecord, err := provider.RecordStore.GetRecord(c.Request().Context(), *userRecordID)
@@ -100,7 +101,7 @@ func RunRouter(
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
-func userRecordID(c echo.Context) (*records.UserRecordID, *string, error) {
+func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *string, error) {
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		return nil, nil, errors.New("user is not a jwt token")
@@ -109,6 +110,10 @@ func userRecordID(c echo.Context) (*records.UserRecordID, *string, error) {
 	claims, ok := user.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return nil, nil, errors.New("jwt claims of unexpected type")
+	}
+
+	if len(claims.Audience) != 1 || claims.Audience[0] != strings.ReplaceAll(realmID.String(), "-", "") {
+		return nil, nil, errors.New("jwt claims contains invalid 'aud' field")
 	}
 
 	if claims.Subject == "" {
