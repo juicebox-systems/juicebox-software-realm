@@ -36,7 +36,7 @@ func TestParseKid(t *testing.T) {
 	assert.Nil(t, tenantSecretsKey)
 	assert.Nil(t, version)
 
-	// "kid" must only contain alphanumeric characters and "-"
+	// "kid" must only contain alphanumeric characters
 	token = &jwt.Token{
 		Header: map[string]interface{}{"kid": "abc123//*:2"},
 	}
@@ -46,6 +46,18 @@ func TestParseKid(t *testing.T) {
 	assert.EqualError(t, err, "jwt kid contains non-alphanumeric tenant name")
 	assert.Nil(t, tenantSecretsKey)
 	assert.Nil(t, version)
+
+	// "kid" can also have "test-" prefix
+	token = &jwt.Token{
+		Header: map[string]interface{}{"kid": "test-abc123:456"},
+	}
+
+	tenantSecretsKey, version, err = ParseKid(token)
+	assert.NoError(t, err)
+	expectedTenantSecretsKey = types.JuiceboxTenantSecretPrefix + "test-abc123"
+	expectedVersion = uint64(456)
+	assert.Equal(t, expectedTenantSecretsKey, *tenantSecretsKey)
+	assert.Equal(t, expectedVersion, *version)
 
 	// Missing "kid" field in the token header
 	token = &jwt.Token{

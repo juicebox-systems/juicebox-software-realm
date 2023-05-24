@@ -39,7 +39,7 @@ func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error)
 
 	secrets := make(map[string]map[uint64][]byte)
 
-	regex := regexp.MustCompile("^[a-zA-Z0-9]+$")
+	regex := regexp.MustCompile("^(test-)?[a-zA-Z0-9]+$")
 
 	for tenantName, versionAndSecrets := range unmarshaledSecrets {
 		if match := regex.MatchString(tenantName); !match {

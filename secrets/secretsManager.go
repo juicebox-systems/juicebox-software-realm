@@ -53,7 +53,7 @@ func parseKid(token *jwt.Token) (*string, *uint64, error) {
 
 	tenantName := split[0]
 
-	if match, err := regexp.MatchString("^[a-zA-Z0-9]+$", tenantName); !match || err != nil {
+	if match, err := regexp.MatchString("^(test-)?[a-zA-Z0-9]+$", tenantName); !match || err != nil {
 		return nil, nil, errors.New("jwt kid contains non-alphanumeric tenant name")
 	}
 
