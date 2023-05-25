@@ -7,7 +7,8 @@ type Register1 struct{}
 type Register2 struct{}
 
 type Recover1 struct {
-	Salt types.Salt `cbor:"salt"`
+	Version   types.RegistrationVersion `cbor:"version"`
+	SaltShare types.SaltShare           `cbor:"salt_share"`
 }
 
 type Recover2 struct {

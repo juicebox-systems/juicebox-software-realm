@@ -7,7 +7,8 @@ import (
 type Register1 struct{}
 
 type Register2 struct {
-	Salt           types.Salt
+	Version        types.RegistrationVersion
+	SaltShare      types.SaltShare      `cbor:"salt_share"`
 	OprfSeed       types.OprfSeed       `cbor:"oprf_seed"`
 	UnlockTag      types.UnlockTag      `cbor:"tag"`
 	MaskedTgkShare types.MaskedTgkShare `cbor:"masked_tgk_share"`
@@ -18,10 +19,12 @@ type Register2 struct {
 type Recover1 struct{}
 
 type Recover2 struct {
+	Version          types.RegistrationVersion
 	BlindedOprfInput types.OprfBlindedInput `cbor:"blinded_oprf_input"`
 }
 
 type Recover3 struct {
+	Version   types.RegistrationVersion
 	UnlockTag types.UnlockTag `cbor:"tag"`
 }
 

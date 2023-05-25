@@ -9,10 +9,11 @@ import (
 type Status string
 
 const (
-	Ok            Status = "Ok"
-	NotRegistered Status = "NotRegistered"
-	BadUnlockTag  Status = "BadUnlockTag"
-	NoGuesses     Status = "NoGuesses"
+	Ok              Status = "Ok"
+	NotRegistered   Status = "NotRegistered"
+	BadUnlockTag    Status = "BadUnlockTag"
+	NoGuesses       Status = "NoGuesses"
+	VersionMismatch Status = "VersionMismatch"
 )
 
 type SecretsResponse struct {

@@ -16,7 +16,9 @@ const (
 const JuiceboxRealmDatabasePrefix string = "jb-sw-realm-"
 const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"
 
-type Salt [32]byte
+type RegistrationVersion [16]byte
+
+type SaltShare [17]byte
 
 type OprfSeed [32]byte
 type OprfBlindedInput [32]byte

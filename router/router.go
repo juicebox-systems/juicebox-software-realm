@@ -146,7 +146,8 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
 			OprfSeed:       payload.OprfSeed,
-			Salt:           payload.Salt,
+			Version:        payload.Version,
+			SaltShare:      payload.SaltShare,
 			MaskedTgkShare: payload.MaskedTgkShare,
 			SecretShare:    payload.SecretShare,
 			UnlockTag:      payload.UnlockTag,
@@ -171,7 +172,8 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover1{
-					Salt: state.Salt,
+					Version:   state.Version,
+					SaltShare: state.SaltShare,
 				},
 			}, nil, nil
 		case records.NoGuesses:
@@ -188,6 +190,13 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 	case requests.Recover2:
 		switch state := record.RegistrationState.(type) {
 		case records.Registered:
+			if state.Version != payload.Version {
+				return &responses.SecretsResponse{
+					Status:  responses.VersionMismatch,
+					Payload: responses.Recover2{},
+				}, nil, nil
+			}
+
 			if state.GuessCount >= uint16(state.Policy.NumGuesses) {
 				record.RegistrationState = records.NoGuesses{}
 				return &responses.SecretsResponse{
@@ -251,6 +260,13 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 	case requests.Recover3:
 		switch state := record.RegistrationState.(type) {
 		case records.Registered:
+			if state.Version != payload.Version {
+				return &responses.SecretsResponse{
+					Status:  responses.VersionMismatch,
+					Payload: responses.Recover3{},
+				}, nil, nil
+			}
+
 			guessesRemaining := state.Policy.NumGuesses - state.GuessCount
 
 			if payload.UnlockTag.ConstantTimeCompare(state.UnlockTag) != 1 {

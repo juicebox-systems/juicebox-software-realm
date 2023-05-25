@@ -44,7 +44,8 @@ func TestHandleRequest(t *testing.T) {
 
 	// Register 2
 	request.Payload = requests.Register2{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -52,7 +53,8 @@ func TestHandleRequest(t *testing.T) {
 		Policy:         types.Policy{NumGuesses: 2},
 	}
 	expectedUserRecord.RegistrationState = records.Registered{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -72,7 +74,8 @@ func TestHandleRequest(t *testing.T) {
 	// Recover 1 Registered
 	request.Payload = requests.Recover1{}
 	expectedResponse.Payload = responses.Recover1{
-		Salt: types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:   types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare: types.SaltShare(makeRepeatingByteArray(1, 17)),
 	}
 	expectedResponse.Status = responses.Ok
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
@@ -82,6 +85,7 @@ func TestHandleRequest(t *testing.T) {
 
 	// Recover 2 Registered
 	request.Payload = requests.Recover2{
+		Version:          types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
 		BlindedOprfInput: oprfBlindedInput,
 	}
 	expectedResponse.Payload = responses.Recover2{
@@ -90,7 +94,8 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -107,6 +112,7 @@ func TestHandleRequest(t *testing.T) {
 
 	// Recover 3 Correct Unlock Tag
 	request.Payload = requests.Recover3{
+		Version:   types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
 		UnlockTag: types.UnlockTag(makeRepeatingByteArray(3, 32)),
 	}
 	expectedResponse.Payload = responses.Recover3{
@@ -114,7 +120,8 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -129,6 +136,7 @@ func TestHandleRequest(t *testing.T) {
 
 	// Recover 3 Wrong Unlock Tag, Guesses Remaining
 	request.Payload = requests.Recover3{
+		Version:   types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
 		UnlockTag: types.UnlockTag(makeRepeatingByteArray(5, 32)),
 	}
 	guessesRemaining := uint16(1)
@@ -137,7 +145,8 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.BadUnlockTag
 	expectedUserRecord.RegistrationState = records.Registered{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -151,7 +160,8 @@ func TestHandleRequest(t *testing.T) {
 	assert.Equal(t, expectedResponse, *response)
 
 	userRecord.RegistrationState = records.Registered{
-		Salt:           types.Salt(makeRepeatingByteArray(1, 32)),
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
 		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
 		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
 		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
@@ -162,6 +172,7 @@ func TestHandleRequest(t *testing.T) {
 
 	// Recover 3 Wrong Unlock Tag, No Guesses Remaining
 	request.Payload = requests.Recover3{
+		Version:   types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
 		UnlockTag: types.UnlockTag(makeRepeatingByteArray(5, 32)),
 	}
 	guessesRemaining = 0
@@ -187,7 +198,9 @@ func TestHandleRequest(t *testing.T) {
 	assert.Equal(t, expectedResponse, *response)
 
 	// Recover 2 NoGuesses
-	request.Payload = requests.Recover2{}
+	request.Payload = requests.Recover2{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+	}
 	expectedResponse.Payload = responses.Recover2{}
 	expectedResponse.Status = responses.NoGuesses
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
@@ -196,7 +209,9 @@ func TestHandleRequest(t *testing.T) {
 	assert.Equal(t, expectedResponse, *response)
 
 	// Recover 3 NoGuesses
-	request.Payload = requests.Recover3{}
+	request.Payload = requests.Recover3{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+	}
 	expectedResponse.Payload = responses.Recover3{}
 	expectedResponse.Status = responses.NoGuesses
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
@@ -239,6 +254,38 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Recover3{}
 	expectedResponse.Payload = responses.Recover3{}
 	expectedResponse.Status = responses.NotRegistered
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	assert.NoError(t, err)
+	assert.Nil(t, updatedRecord)
+	assert.Equal(t, expectedResponse, *response)
+
+	// Recover 2 VersionMismatch
+	userRecord.RegistrationState = records.Registered{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+	}
+
+	request.Payload = requests.Recover2{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+	}
+	guessesRemaining = 0
+	expectedResponse.Payload = responses.Recover2{}
+	expectedResponse.Status = responses.VersionMismatch
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	assert.NoError(t, err)
+	assert.Nil(t, updatedRecord)
+	assert.Equal(t, expectedResponse, *response)
+
+	// Recover 3 VersionMismatch
+	userRecord.RegistrationState = records.Registered{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+	}
+
+	request.Payload = requests.Recover3{
+		Version: types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+	}
+	guessesRemaining = 0
+	expectedResponse.Payload = responses.Recover3{}
+	expectedResponse.Status = responses.VersionMismatch
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
