@@ -311,7 +311,13 @@ func TestUserRecordID(t *testing.T) {
 		Issuer:   "apollo",
 		Audience: []string{strings.ReplaceAll(realmID.String(), "-", "")},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	header := map[string]interface{}{
+		"kid": "apollo:1",
+	}
+	token := &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 
 	// Create a mock Echo context with the user token
 	e := echo.New()
@@ -334,7 +340,9 @@ func TestUserRecordID(t *testing.T) {
 	assert.Nil(t, tenantID)
 
 	// Test when the jwt claims are of unexpected type
-	invalidToken := jwt.New(jwt.SigningMethodHS256)
+	invalidToken := &jwt.Token{
+		Header: header,
+	}
 	c.Set("user", invalidToken)
 	userRecordID, tenantID, err = UserRecordID(c, realmID)
 	assert.Error(t, err)
@@ -344,7 +352,10 @@ func TestUserRecordID(t *testing.T) {
 
 	// Test when the jwt claims missing 'sub' field
 	claims.Subject = ""
-	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 	c.Set("user", token)
 	userRecordID, tenantID, err = UserRecordID(c, realmID)
 	assert.Error(t, err)
@@ -355,7 +366,10 @@ func TestUserRecordID(t *testing.T) {
 	// Test when the jwt claims missing 'iss' field
 	claims.Issuer = ""
 	claims.Subject = "apollo"
-	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 	c.Set("user", token)
 	userRecordID, tenantID, err = UserRecordID(c, realmID)
 	assert.Error(t, err)
@@ -363,8 +377,25 @@ func TestUserRecordID(t *testing.T) {
 	assert.Nil(t, userRecordID)
 	assert.Nil(t, tenantID)
 
+	// Test when the jwt signer does not match the 'iss' field
+	claims.Issuer = "apollo"
+	header["kid"] = "artemis:1"
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
+	c.Set("user", token)
+	userRecordID, tenantID, err = UserRecordID(c, realmID)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "jwt 'iss' field does not match signer")
+	assert.Nil(t, userRecordID)
+	assert.Nil(t, tenantID)
+
 	// Test when the jwt claims has invalid 'aud' field
-	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 	expectedRealmID, err := uuid.NewRandom()
 	assert.NoError(t, err)
 	c.Set("user", token)
@@ -376,7 +407,10 @@ func TestUserRecordID(t *testing.T) {
 
 	// Test when the jwt claims has additional realms in 'aud' field
 	claims.Audience = append(claims.Audience, "secondaudience")
-	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 	c.Set("user", token)
 	userRecordID, tenantID, err = UserRecordID(c, realmID)
 	assert.Error(t, err)
@@ -386,7 +420,10 @@ func TestUserRecordID(t *testing.T) {
 
 	// Test when the jwt claims has no realms in 'aud' field
 	claims.Audience = []string{}
-	token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token = &jwt.Token{
+		Header: header,
+		Claims: claims,
+	}
 	c.Set("user", token)
 	userRecordID, tenantID, err = UserRecordID(c, realmID)
 	assert.Error(t, err)

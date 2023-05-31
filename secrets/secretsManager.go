@@ -22,12 +22,14 @@ type SecretsManager interface {
 }
 
 func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) ([]byte, error) {
-	name, version, err := parseKid(token)
+	name, version, err := ParseKid(token)
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := sm.GetSecret(ctx, *name, *version)
+	tenantSecretKey := types.JuiceboxTenantSecretPrefix + *name
+
+	key, err := sm.GetSecret(ctx, tenantSecretKey, *version)
 	if err != nil {
 		return nil, errors.New("no signing key for jwt")
 	}
@@ -35,7 +37,7 @@ func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) 
 	return key, nil
 }
 
-func parseKid(token *jwt.Token) (*string, *uint64, error) {
+func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 	kid, ok := token.Header["kid"]
 	if !ok {
 		return nil, nil, errors.New("jwt missing kid")
@@ -57,15 +59,13 @@ func parseKid(token *jwt.Token) (*string, *uint64, error) {
 		return nil, nil, errors.New("jwt kid contains non-alphanumeric tenant name")
 	}
 
-	tenantSecretsKey := types.JuiceboxTenantSecretPrefix + tenantName
-
 	versionString := split[1]
 	version, err := strconv.ParseUint(versionString, 10, 64)
 	if err != nil {
 		return nil, nil, errors.New("jwt kid contained invalid version")
 	}
 
-	return &tenantSecretsKey, &version, nil
+	return &tenantName, &version, nil
 }
 
 func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (SecretsManager, error) {

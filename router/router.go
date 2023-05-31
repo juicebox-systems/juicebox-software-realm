@@ -102,12 +102,12 @@ func RunRouter(
 }
 
 func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *string, error) {
-	user, ok := c.Get("user").(*jwt.Token)
+	token, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		return nil, nil, errors.New("user is not a jwt token")
 	}
 
-	claims, ok := user.Claims.(*jwt.RegisteredClaims)
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return nil, nil, errors.New("jwt claims of unexpected type")
 	}
@@ -124,12 +124,21 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 	if claims.Issuer == "" {
 		return nil, nil, errors.New("jwt claims missing 'iss' field")
 	}
-	tenantID := claims.Issuer
+	tenantName := claims.Issuer
 
-	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantID, userID)))
+	signingTenantName, _, err := secrets.ParseKid(token)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if *signingTenantName != tenantName {
+		return nil, nil, errors.New("jwt 'iss' field does not match signer")
+	}
+
+	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantName, userID)))
 	userRecordID := records.UserRecordID(hex.EncodeToString(hash[:]))
 
-	return &userRecordID, &tenantID, nil
+	return &userRecordID, &tenantName, nil
 }
 
 func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {

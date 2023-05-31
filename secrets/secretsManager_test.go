@@ -4,11 +4,8 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/juicebox-software-realm/types"
 	"github.com/stretchr/testify/assert"
 )
-
-var ParseKid = parseKid
 
 func TestParseKid(t *testing.T) {
 	// Valid input
@@ -18,11 +15,11 @@ func TestParseKid(t *testing.T) {
 		},
 	}
 
-	tenantSecretsKey, version, err := ParseKid(token)
+	tenantName, version, err := ParseKid(token)
 	assert.NoError(t, err)
-	expectedTenantSecretsKey := types.JuiceboxTenantSecretPrefix + "juicebox"
+	expectedTenantName := "juicebox"
 	expectedVersion := uint64(456)
-	assert.Equal(t, expectedTenantSecretsKey, *tenantSecretsKey)
+	assert.Equal(t, expectedTenantName, *tenantName)
 	assert.Equal(t, expectedVersion, *version)
 
 	// "kid" is not a string
@@ -30,10 +27,10 @@ func TestParseKid(t *testing.T) {
 		Header: map[string]interface{}{"kid": 5},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "jwt kid is not a string")
-	assert.Nil(t, tenantSecretsKey)
+	assert.Nil(t, tenantName)
 	assert.Nil(t, version)
 
 	// "kid" must only contain alphanumeric characters
@@ -41,10 +38,10 @@ func TestParseKid(t *testing.T) {
 		Header: map[string]interface{}{"kid": "abc123//*:2"},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "jwt kid contains non-alphanumeric tenant name")
-	assert.Nil(t, tenantSecretsKey)
+	assert.Nil(t, tenantName)
 	assert.Nil(t, version)
 
 	// "kid" can also have "test-" prefix
@@ -52,11 +49,11 @@ func TestParseKid(t *testing.T) {
 		Header: map[string]interface{}{"kid": "test-abc123:456"},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.NoError(t, err)
-	expectedTenantSecretsKey = types.JuiceboxTenantSecretPrefix + "test-abc123"
+	expectedTenantName = "test-abc123"
 	expectedVersion = uint64(456)
-	assert.Equal(t, expectedTenantSecretsKey, *tenantSecretsKey)
+	assert.Equal(t, expectedTenantName, *tenantName)
 	assert.Equal(t, expectedVersion, *version)
 
 	// Missing "kid" field in the token header
@@ -64,10 +61,10 @@ func TestParseKid(t *testing.T) {
 		Header: map[string]interface{}{},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "jwt missing kid")
-	assert.Nil(t, tenantSecretsKey)
+	assert.Nil(t, tenantName)
 	assert.Nil(t, version)
 
 	// Invalid "kid" field format
@@ -77,10 +74,10 @@ func TestParseKid(t *testing.T) {
 		},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "jwt kid incorrectly formatted")
-	assert.Nil(t, tenantSecretsKey)
+	assert.Nil(t, tenantName)
 	assert.Nil(t, version)
 
 	// Invalid version number in the "kid" field
@@ -90,9 +87,9 @@ func TestParseKid(t *testing.T) {
 		},
 	}
 
-	tenantSecretsKey, version, err = ParseKid(token)
+	tenantName, version, err = ParseKid(token)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "jwt kid contained invalid version")
-	assert.Nil(t, tenantSecretsKey)
+	assert.Nil(t, tenantName)
 	assert.Nil(t, version)
 }
