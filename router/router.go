@@ -2,7 +2,6 @@ package router
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -28,7 +27,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"golang.org/x/crypto/blake2s"
 )
 
 func RunRouter(
@@ -135,8 +133,10 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 		return nil, nil, errors.New("jwt 'iss' field does not match signer")
 	}
 
-	hash := blake2s.Sum256([]byte(fmt.Sprintf("%s|%s", tenantName, userID)))
-	userRecordID := records.UserRecordID(hex.EncodeToString(hash[:]))
+	userRecordID, err := records.CreateUserRecordID(tenantName, userID)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return &userRecordID, &tenantName, nil
 }

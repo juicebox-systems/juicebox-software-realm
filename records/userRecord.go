@@ -1,14 +1,32 @@
 package records
 
 import (
+	"encoding/hex"
 	"errors"
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/juicebox-software-realm/types"
+	"golang.org/x/crypto/blake2s"
 )
 
 type UserRecordID string
+
+func CreateUserRecordID(tenantName string, userID string) (UserRecordID, error) {
+	type UserRecordIDSerializer struct {
+		TenantName string `cbor:"tenant_name"`
+		UserID     string `cbor:"user_id"`
+	}
+
+	data, err := cbor.Marshal(UserRecordIDSerializer{tenantName, userID})
+	if err != nil {
+		return "", err
+	}
+
+	hash := blake2s.Sum256(data)
+
+	return UserRecordID(hex.EncodeToString(hash[:])), nil
+}
 
 type UserRecord struct {
 	// oneof Registered, NotRegistered, NoGuesses

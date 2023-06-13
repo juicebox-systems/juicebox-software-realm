@@ -326,7 +326,7 @@ func TestUserRecordID(t *testing.T) {
 
 	userRecordID, tenantID, err := UserRecordID(c, realmID)
 
-	expectedUserRecordID := records.UserRecordID("8e240996ec810cb6dd09f89257200181763136ded36a0cd843c8c0212b95dae1")
+	expectedUserRecordID := records.UserRecordID("1033250bfb2d27fd2a7fccba346851d517700a3ea5155429d5b5845875db75d3")
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecordID, *userRecordID)
 	assert.Equal(t, "apollo", *tenantID)
