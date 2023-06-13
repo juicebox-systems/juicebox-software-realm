@@ -16,14 +16,14 @@ type UserRecord struct {
 }
 
 type Registered struct {
-	OprfSeed       types.OprfSeed            `cbor:"oprf_seed"`
-	Version        types.RegistrationVersion `cbor:"version"`
-	SaltShare      types.SaltShare           `cbor:"salt_share"`
-	MaskedTgkShare types.MaskedTgkShare      `cbor:"masked_tgk_share"`
-	SecretShare    types.SecretShare         `cbor:"secret_share"`
-	UnlockTag      types.UnlockTag           `cbor:"unlock_tag"`
-	GuessCount     uint16                    `cbor:"guess_count"`
-	Policy         types.Policy              `cbor:"policy"`
+	OprfSeed             types.OprfSeed             `cbor:"oprf_seed"`
+	Version              types.RegistrationVersion  `cbor:"version"`
+	SaltShare            types.SaltShare            `cbor:"salt_share"`
+	MaskedUnlockKeyShare types.MaskedUnlockKeyShare `cbor:"masked_unlock_key_share"`
+	SecretShare          types.SecretShare          `cbor:"secret_share"`
+	UnlockTag            types.UnlockTag            `cbor:"unlock_tag"`
+	GuessCount           uint16                     `cbor:"guess_count"`
+	Policy               types.Policy               `cbor:"policy"`
 }
 
 type NoGuesses struct{}

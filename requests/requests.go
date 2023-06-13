@@ -7,13 +7,13 @@ import (
 type Register1 struct{}
 
 type Register2 struct {
-	Version        types.RegistrationVersion
-	SaltShare      types.SaltShare      `cbor:"salt_share"`
-	OprfSeed       types.OprfSeed       `cbor:"oprf_seed"`
-	UnlockTag      types.UnlockTag      `cbor:"tag"`
-	MaskedTgkShare types.MaskedTgkShare `cbor:"masked_tgk_share"`
-	SecretShare    types.SecretShare    `cbor:"secret_share"`
-	Policy         types.Policy
+	Version              types.RegistrationVersion
+	SaltShare            types.SaltShare            `cbor:"salt_share"`
+	OprfSeed             types.OprfSeed             `cbor:"oprf_seed"`
+	UnlockTag            types.UnlockTag            `cbor:"tag"`
+	MaskedUnlockKeyShare types.MaskedUnlockKeyShare `cbor:"masked_unlock_key_share"`
+	SecretShare          types.SecretShare          `cbor:"secret_share"`
+	Policy               types.Policy
 }
 
 type Recover1 struct{}

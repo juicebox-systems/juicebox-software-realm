@@ -44,23 +44,23 @@ func TestHandleRequest(t *testing.T) {
 
 	// Register 2
 	request.Payload = requests.Register2{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
 	}
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
-		GuessCount:     0,
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
+		GuessCount:           0,
 	}
 	expectedResponse.Payload = responses.Register2{}
 	expectedResponse.Status = responses.Ok
@@ -89,19 +89,19 @@ func TestHandleRequest(t *testing.T) {
 		BlindedOprfInput: oprfBlindedInput,
 	}
 	expectedResponse.Payload = responses.Recover2{
-		BlindedOprfResult: oprfBlindedResult,
-		MaskedTgkShare:    types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
+		BlindedOprfResult:    oprfBlindedResult,
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
-		GuessCount:     1,
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
+		GuessCount:           1,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -120,14 +120,14 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
-		GuessCount:     0,
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
+		GuessCount:           0,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -145,14 +145,14 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.BadUnlockTag
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
-		GuessCount:     1,
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
+		GuessCount:           1,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -160,14 +160,14 @@ func TestHandleRequest(t *testing.T) {
 	assert.Equal(t, expectedResponse, *response)
 
 	userRecord.RegistrationState = records.Registered{
-		Version:        types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
-		SaltShare:      types.SaltShare(makeRepeatingByteArray(1, 17)),
-		OprfSeed:       types.OprfSeed(makeRepeatingByteArray(2, 32)),
-		UnlockTag:      types.UnlockTag(makeRepeatingByteArray(3, 32)),
-		MaskedTgkShare: types.MaskedTgkShare(makeRepeatingByteArray(1, 33)),
-		SecretShare:    types.SecretShare(makeRepeatingByteArray(1, 146)),
-		Policy:         types.Policy{NumGuesses: 2},
-		GuessCount:     2,
+		Version:              types.RegistrationVersion(makeRepeatingByteArray(10, 16)),
+		SaltShare:            types.SaltShare(makeRepeatingByteArray(1, 17)),
+		OprfSeed:             types.OprfSeed(makeRepeatingByteArray(2, 32)),
+		UnlockTag:            types.UnlockTag(makeRepeatingByteArray(3, 32)),
+		MaskedUnlockKeyShare: types.MaskedUnlockKeyShare(makeRepeatingByteArray(1, 33)),
+		SecretShare:          types.SecretShare(makeRepeatingByteArray(1, 146)),
+		Policy:               types.Policy{NumGuesses: 2},
+		GuessCount:           2,
 	}
 
 	// Recover 3 Wrong Unlock Tag, No Guesses Remaining

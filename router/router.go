@@ -154,14 +154,14 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 		}, nil, nil
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
-			OprfSeed:       payload.OprfSeed,
-			Version:        payload.Version,
-			SaltShare:      payload.SaltShare,
-			MaskedTgkShare: payload.MaskedTgkShare,
-			SecretShare:    payload.SecretShare,
-			UnlockTag:      payload.UnlockTag,
-			GuessCount:     0,
-			Policy:         payload.Policy,
+			OprfSeed:             payload.OprfSeed,
+			Version:              payload.Version,
+			SaltShare:            payload.SaltShare,
+			MaskedUnlockKeyShare: payload.MaskedUnlockKeyShare,
+			SecretShare:          payload.SecretShare,
+			UnlockTag:            payload.UnlockTag,
+			GuessCount:           0,
+			Policy:               payload.Policy,
 		}
 		return &responses.SecretsResponse{
 			Status:  responses.Ok,
@@ -251,8 +251,8 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
-					BlindedOprfResult: types.OprfBlindedResult(serializedBlindedOprfResult),
-					MaskedTgkShare:    state.MaskedTgkShare,
+					BlindedOprfResult:    types.OprfBlindedResult(serializedBlindedOprfResult),
+					MaskedUnlockKeyShare: state.MaskedUnlockKeyShare,
 				},
 			}, &record, nil
 		case records.NoGuesses:

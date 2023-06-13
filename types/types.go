@@ -24,7 +24,7 @@ type OprfSeed [32]byte
 type OprfBlindedInput [32]byte
 type OprfBlindedResult [32]byte
 
-type MaskedTgkShare [33]byte
+type MaskedUnlockKeyShare [33]byte
 type SecretShare [146]byte
 
 type Policy struct {

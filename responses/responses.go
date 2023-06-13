@@ -12,8 +12,8 @@ type Recover1 struct {
 }
 
 type Recover2 struct {
-	BlindedOprfResult types.OprfBlindedResult `cbor:"blinded_oprf_result"`
-	MaskedTgkShare    types.MaskedTgkShare    `cbor:"masked_tgk_share"`
+	BlindedOprfResult    types.OprfBlindedResult    `cbor:"blinded_oprf_result"`
+	MaskedUnlockKeyShare types.MaskedUnlockKeyShare `cbor:"masked_unlock_key_share"`
 }
 
 type Recover3 struct {
