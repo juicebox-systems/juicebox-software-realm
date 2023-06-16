@@ -12,11 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type DynamoDbRecordStore struct {
@@ -29,11 +29,11 @@ const userRecordAttributeName string = "serializedUserRecord"
 const versionAttributeName string = "version"
 
 func NewDynamoDbRecordStore(ctx context.Context, realmID uuid.UUID) (*DynamoDbRecordStore, error) {
-	_, span := trace.StartSpan(
+	_, span := otel.StartSpan(
 		ctx,
 		"NewDynamoDbRecordStore",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemDynamoDB),
 	)
 	defer span.End()
 
@@ -65,11 +65,11 @@ func NewDynamoDbRecordStore(ctx context.Context, realmID uuid.UUID) (*DynamoDbRe
 }
 
 func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"GetRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemDynamoDB),
 	)
 	defer span.End()
 
@@ -117,11 +117,11 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 }
 
 func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"WriteRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemDynamoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemDynamoDB),
 	)
 	defer span.End()
 

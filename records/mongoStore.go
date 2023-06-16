@@ -8,7 +8,7 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type MongoRecordStore struct {
@@ -29,11 +29,11 @@ const serializedUserRecordKey string = "serializedUserRecord"
 const versionKey string = "version"
 
 func NewMongoRecordStore(ctx context.Context, realmID uuid.UUID) (*MongoRecordStore, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"NewMongoRecordStore",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemMongoDB),
 	)
 	defer span.End()
 
@@ -85,11 +85,11 @@ func NewMongoRecordStore(ctx context.Context, realmID uuid.UUID) (*MongoRecordSt
 }
 
 func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"GetRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemMongoDB),
 	)
 	defer span.End()
 
@@ -142,11 +142,11 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 }
 
 func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"WriteRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemMongoDB),
 	)
 	defer span.End()
 

@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var memoryRecords = map[UserRecordID]UserRecord{}
@@ -15,11 +15,11 @@ var memoryRecords = map[UserRecordID]UserRecord{}
 type MemoryRecordStore struct{}
 
 func (m MemoryRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
-	_, span := trace.StartSpan(
+	_, span := otel.StartSpan(
 		ctx,
 		"GetRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemKey.String("memory")),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemKey.String("memory")),
 	)
 	defer span.End()
 
@@ -31,11 +31,11 @@ func (m MemoryRecordStore) GetRecord(ctx context.Context, recordID UserRecordID)
 }
 
 func (m MemoryRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
-	_, span := trace.StartSpan(
+	_, span := otel.StartSpan(
 		ctx,
 		"WriteRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemKey.String("memory")),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemKey.String("memory")),
 	)
 	defer span.End()
 

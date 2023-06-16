@@ -7,14 +7,14 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type MongoSecretsManager struct {
@@ -27,11 +27,11 @@ const secretsVersionKey string = "version"
 const secretsSecretKey string = "secret"
 
 func NewMongoSecretsManager(ctx context.Context, realmID uuid.UUID) (*MongoSecretsManager, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"NewMongoSecretsManager",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemMongoDB),
 	)
 	defer span.End()
 
@@ -70,11 +70,11 @@ func NewMongoSecretsManager(ctx context.Context, realmID uuid.UUID) (*MongoSecre
 }
 
 func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"GetSecret",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemMongoDB),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemMongoDB),
 	)
 	defer span.End()
 

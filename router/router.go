@@ -14,12 +14,12 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
-	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -85,6 +85,13 @@ func RunRouter(
 			return contextAwareError(c, http.StatusInternalServerError, "Error marshalling response payload")
 		}
 
+		otel.IncrementInt64Counter(
+			c.Request().Context(),
+			"realm.request.count",
+			attribute.String("tenant", *tenantID),
+			attribute.String("type", reflect.TypeOf(request.Payload).Name()),
+		)
+
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
 		return c.Blob(http.StatusOK, echo.MIMEOctetStream, serializedResponse)
 	}, echojwt.WithConfig(echojwt.Config{
@@ -142,9 +149,9 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 }
 
 func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
-	_, span := trace.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
+	_, span := otel.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
 	defer span.End()
-	span.SetAttributes(attribute.KeyValue{Key: "tenant", Value: attribute.StringValue(tenantID)})
+	span.SetAttributes(attribute.String("tenant", tenantID))
 
 	switch payload := request.Payload.(type) {
 	case requests.Register1:

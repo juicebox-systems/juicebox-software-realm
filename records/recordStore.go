@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -23,7 +23,7 @@ type RecordStore interface {
 }
 
 func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (RecordStore, error) {
-	ctx, span := trace.StartSpan(ctx, "NewRecordStore")
+	ctx, span := otel.StartSpan(ctx, "NewRecordStore")
 	defer span.End()
 
 	switch provider {

@@ -8,7 +8,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -18,7 +18,7 @@ type MemorySecretsManager struct {
 }
 
 func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error) {
-	_, span := trace.StartSpan(ctx, "NewMemorySecretsManager")
+	_, span := otel.StartSpan(ctx, "NewMemorySecretsManager")
 	defer span.End()
 
 	secretsJSON := os.Getenv("TENANT_SECRETS")
@@ -65,7 +65,7 @@ func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error)
 }
 
 func (sm MemorySecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
-	_, span := trace.StartSpan(ctx, "GetSecret")
+	_, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 
 	secretVersions, ok := sm.secrets[name]

@@ -7,7 +7,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -17,7 +17,7 @@ type GcpSecretsManager struct {
 }
 
 func NewGcpSecretsManager(ctx context.Context) (*GcpSecretsManager, error) {
-	ctx, span := trace.StartSpan(ctx, "NewGcpSecretsManager")
+	ctx, span := otel.StartSpan(ctx, "NewGcpSecretsManager")
 	defer span.End()
 
 	projectID := os.Getenv("GCP_PROJECT_ID")
@@ -46,7 +46,7 @@ func (sm GcpSecretsManager) Close() {
 }
 
 func (sm GcpSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "GetSecret")
+	ctx, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 
 	result, err := sm.client.AccessSecretVersion(ctx, &secretmanagerpb.AccessSecretVersionRequest{

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 
@@ -18,7 +18,7 @@ type AwsSecretsManager struct {
 }
 
 func NewAwsSecretsManager(ctx context.Context) (*AwsSecretsManager, error) {
-	_, span := trace.StartSpan(ctx, "NewAwsSecretsManager")
+	_, span := otel.StartSpan(ctx, "NewAwsSecretsManager")
 	defer span.End()
 
 	region := os.Getenv("AWS_REGION_NAME")
@@ -46,7 +46,7 @@ func NewAwsSecretsManager(ctx context.Context) (*AwsSecretsManager, error) {
 }
 
 func (sm AwsSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "GetSecret")
+	ctx, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 
 	versionString := fmt.Sprint(version)

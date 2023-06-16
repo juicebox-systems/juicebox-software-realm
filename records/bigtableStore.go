@@ -11,11 +11,11 @@ import (
 	"cloud.google.com/go/bigtable"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 	grpccodes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,11 +28,11 @@ type BigtableRecordStore struct {
 const familyName = "f"
 
 func NewBigtableRecordStore(ctx context.Context, realmID uuid.UUID) (*BigtableRecordStore, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"NewBigtableRecordStore",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
 	)
 	defer span.End()
 
@@ -95,11 +95,11 @@ func (bt BigtableRecordStore) Close() {
 }
 
 func (bt BigtableRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"GetRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
 	)
 	defer span.End()
 
@@ -134,11 +134,11 @@ func (bt BigtableRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 }
 
 func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
-	ctx, span := trace.StartSpan(
+	ctx, span := otel.StartSpan(
 		ctx,
 		"WriteRecord",
-		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
-		oteltrace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(semconv.DBSystemKey.String("bigtable")),
 	)
 	defer span.End()
 

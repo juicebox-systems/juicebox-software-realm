@@ -37,7 +37,7 @@ exporters:
       key: ${env:DD_API_KEY}
     host_metadata:
       tags:
-        - realm_id:${env:REALM_ID}
+        - realm:${env:REALM_ID}
 
 service:
   pipelines:

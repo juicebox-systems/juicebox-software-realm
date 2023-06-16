@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"github.com/juicebox-software-realm/trace"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -69,7 +69,7 @@ func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 }
 
 func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (SecretsManager, error) {
-	ctx, span := trace.StartSpan(ctx, "NewSecretsManager")
+	ctx, span := otel.StartSpan(ctx, "NewSecretsManager")
 	defer span.End()
 
 	switch provider {

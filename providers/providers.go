@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/secrets"
-	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -37,7 +37,7 @@ func Parse(nameString string) (types.ProviderName, error) {
 }
 
 func NewProvider(ctx context.Context, name types.ProviderName, realmID uuid.UUID) (*Provider, error) {
-	ctx, span := trace.StartSpan(ctx, "NewProvider")
+	ctx, span := otel.StartSpan(ctx, "NewProvider")
 	defer span.End()
 
 	fmt.Printf("Realm ID: %s\n\n", realmID.String())

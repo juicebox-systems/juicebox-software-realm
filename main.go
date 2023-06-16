@@ -8,9 +8,9 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/router"
-	"github.com/juicebox-software-realm/trace"
 	"github.com/juicebox-software-realm/types"
 )
 
@@ -111,10 +111,17 @@ memory:
 
 	ctx := context.Background()
 
-	tp := trace.InitTraceProvider(ctx, realmID)
+	tp := otel.InitTraceProvider(ctx, realmID)
 	defer func() {
 		if err := tp.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error shutting down tracer provider: %v", err)
+		}
+	}()
+
+	mp := otel.InitMeterProvider(ctx, realmID)
+	defer func() {
+		if err := mp.Shutdown(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "Error shutting down meter provider: %v", err)
 		}
 	}()
 
