@@ -40,6 +40,7 @@ func RunRouter(
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.BodyLimit("2K"))
+	e.Use(middleware.CORS())
 	e.Use(otelecho.Middleware("echo-router"))
 
 	e.GET("/", func(c echo.Context) error {
