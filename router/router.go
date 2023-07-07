@@ -162,14 +162,16 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 		}, nil, nil
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
-			OprfSeed:             payload.OprfSeed,
-			Version:              payload.Version,
-			SaltShare:            payload.SaltShare,
-			MaskedUnlockKeyShare: payload.MaskedUnlockKeyShare,
-			SecretShare:          payload.SecretShare,
-			UnlockTag:            payload.UnlockTag,
-			GuessCount:           0,
-			Policy:               payload.Policy,
+			Version:                            payload.Version,
+			OprfSeed:                           payload.OprfSeed,
+			MaskedUnlockKeyScalarShare:         payload.MaskedUnlockKeyScalarShare,
+			UnlockKeyCommitment:                payload.UnlockKeyCommitment,
+			UnlockKeyTag:                       payload.UnlockKeyTag,
+			UserSecretEncryptionKeyScalarShare: payload.UserSecretEncryptionKeyScalarShare,
+			EncryptedUserSecret:                payload.EncryptedUserSecret,
+			EncryptedUserSecretCommitment:      payload.EncryptedUserSecretCommitment,
+			GuessCount:                         0,
+			Policy:                             payload.Policy,
 		}
 		return &responses.SecretsResponse{
 			Status:  responses.Ok,
@@ -189,8 +191,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover1{
-					Version:   state.Version,
-					SaltShare: state.SaltShare,
+					Version: state.Version,
 				},
 			}, nil, nil
 		case records.NoGuesses:
@@ -233,7 +234,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			}
 
 			blindedElement := group.Ristretto255.NewElement()
-			err = blindedElement.UnmarshalBinary(payload.BlindedOprfInput[:])
+			err = blindedElement.UnmarshalBinary(payload.OprfBlindedInput[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
@@ -242,14 +243,14 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 
 			server := oprf.NewServer(oprf.SuiteRistretto255, key)
 			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedElement}}
-			blindedOprfResult, err := server.Evaluate(&req)
+			oprfBlindedResult, err := server.Evaluate(&req)
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
-			serializedBlindedOprfResult, err := blindedOprfResult.Elements[0].MarshalBinary()
+			serializedOprfBlindedResult, err := oprfBlindedResult.Elements[0].MarshalBinary()
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
@@ -259,8 +260,9 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
-					BlindedOprfResult:    types.OprfBlindedResult(serializedBlindedOprfResult),
-					MaskedUnlockKeyShare: state.MaskedUnlockKeyShare,
+					OprfBlindedResult:          types.OprfBlindedResult(serializedOprfBlindedResult),
+					MaskedUnlockKeyScalarShare: state.MaskedUnlockKeyScalarShare,
+					UnlockKeyCommitment:        state.UnlockKeyCommitment,
 				},
 			}, &record, nil
 		case records.NoGuesses:
@@ -286,13 +288,13 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 
 			guessesRemaining := state.Policy.NumGuesses - state.GuessCount
 
-			if payload.UnlockTag.ConstantTimeCompare(state.UnlockTag) != 1 {
+			if payload.UnlockKeyTag.ConstantTimeCompare(state.UnlockKeyTag) != 1 {
 				if guessesRemaining == 0 {
 					record.RegistrationState = records.NoGuesses{}
 				}
 
 				return &responses.SecretsResponse{
-					Status: responses.BadUnlockTag,
+					Status: responses.BadUnlockKeyTag,
 					Payload: responses.Recover3{
 						GuessesRemaining: &guessesRemaining,
 					},
@@ -305,7 +307,9 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover3{
-					SecretShare: state.SecretShare,
+					UserSecretEncryptionKeyScalarShare: &state.UserSecretEncryptionKeyScalarShare,
+					EncryptedUserSecret:                &state.EncryptedUserSecret,
+					EncryptedUserSecretCommitment:      &state.EncryptedUserSecretCommitment,
 				},
 			}, &record, nil
 		case records.NoGuesses:

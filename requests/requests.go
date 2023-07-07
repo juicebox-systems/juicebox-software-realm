@@ -7,25 +7,27 @@ import (
 type Register1 struct{}
 
 type Register2 struct {
-	Version              types.RegistrationVersion
-	SaltShare            types.SaltShare            `cbor:"salt_share"`
-	OprfSeed             types.OprfSeed             `cbor:"oprf_seed"`
-	UnlockTag            types.UnlockTag            `cbor:"tag"`
-	MaskedUnlockKeyShare types.MaskedUnlockKeyShare `cbor:"masked_unlock_key_share"`
-	SecretShare          types.SecretShare          `cbor:"secret_share"`
-	Policy               types.Policy
+	Version                            types.RegistrationVersion
+	OprfSeed                           types.OprfSeed                           `cbor:"oprf_seed"`
+	MaskedUnlockKeyScalarShare         types.MaskedUnlockKeyScalarShare         `cbor:"masked_unlock_key_scalar_share"`
+	UnlockKeyCommitment                types.UnlockKeyCommitment                `cbor:"unlock_key_commitment"`
+	UnlockKeyTag                       types.UnlockKeyTag                       `cbor:"unlock_key_tag"`
+	UserSecretEncryptionKeyScalarShare types.UserSecretEncryptionKeyScalarShare `cbor:"user_secret_encryption_key_scalar_share"`
+	EncryptedUserSecret                types.EncryptedUserSecret                `cbor:"encrypted_user_secret"`
+	EncryptedUserSecretCommitment      types.EncryptedUserSecretCommitment      `cbor:"encrypted_user_secret_commitment"`
+	Policy                             types.Policy
 }
 
 type Recover1 struct{}
 
 type Recover2 struct {
 	Version          types.RegistrationVersion
-	BlindedOprfInput types.OprfBlindedInput `cbor:"blinded_oprf_input"`
+	OprfBlindedInput types.OprfBlindedInput `cbor:"oprf_blinded_input"`
 }
 
 type Recover3 struct {
-	Version   types.RegistrationVersion
-	UnlockTag types.UnlockTag `cbor:"tag"`
+	Version      types.RegistrationVersion
+	UnlockKeyTag types.UnlockKeyTag `cbor:"unlock_key_tag"`
 }
 
 type Delete struct{}

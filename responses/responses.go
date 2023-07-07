@@ -7,18 +7,20 @@ type Register1 struct{}
 type Register2 struct{}
 
 type Recover1 struct {
-	Version   types.RegistrationVersion `cbor:"version"`
-	SaltShare types.SaltShare           `cbor:"salt_share"`
+	Version types.RegistrationVersion `cbor:"version"`
 }
 
 type Recover2 struct {
-	BlindedOprfResult    types.OprfBlindedResult    `cbor:"blinded_oprf_result"`
-	MaskedUnlockKeyShare types.MaskedUnlockKeyShare `cbor:"masked_unlock_key_share"`
+	OprfBlindedResult          types.OprfBlindedResult          `cbor:"oprf_blinded_result"`
+	MaskedUnlockKeyScalarShare types.MaskedUnlockKeyScalarShare `cbor:"masked_unlock_key_scalar_share"`
+	UnlockKeyCommitment        types.UnlockKeyCommitment        `cbor:"unlock_key_commitment"`
 }
 
 type Recover3 struct {
-	SecretShare      types.SecretShare `cbor:"secret_share,omitempty"`
-	GuessesRemaining *uint16           `cbor:"guesses_remaining,omitempty"`
+	UserSecretEncryptionKeyScalarShare *types.UserSecretEncryptionKeyScalarShare `cbor:"user_secret_encryption_key_scalar_share,omitempty"`
+	EncryptedUserSecret                *types.EncryptedUserSecret                `cbor:"encrypted_user_secret,omitempty"`
+	EncryptedUserSecretCommitment      *types.EncryptedUserSecretCommitment      `cbor:"encrypted_user_secret_commitment,omitempty"`
+	GuessesRemaining                   *uint16                                   `cbor:"guesses_remaining,omitempty"`
 }
 
 type Delete struct{}

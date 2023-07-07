@@ -11,7 +11,7 @@ type Status string
 const (
 	Ok              Status = "Ok"
 	NotRegistered   Status = "NotRegistered"
-	BadUnlockTag    Status = "BadUnlockTag"
+	BadUnlockKeyTag Status = "BadUnlockKeyTag"
 	NoGuesses       Status = "NoGuesses"
 	VersionMismatch Status = "VersionMismatch"
 )
