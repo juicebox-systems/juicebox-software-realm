@@ -9,8 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/cloudflare/circl/group"
-	"github.com/cloudflare/circl/oprf"
+	r255 "github.com/bwesterb/go-ristretto"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -163,8 +162,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
 			Version:                            payload.Version,
-			OprfSeed:                           payload.OprfSeed,
-			MaskedUnlockKeyScalarShare:         payload.MaskedUnlockKeyScalarShare,
+			OprfKey:                            payload.OprfKey,
 			UnlockKeyCommitment:                payload.UnlockKeyCommitment,
 			UnlockKeyTag:                       payload.UnlockKeyTag,
 			UserSecretEncryptionKeyScalarShare: payload.UserSecretEncryptionKeyScalarShare,
@@ -226,31 +224,26 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			key, err := oprf.DeriveKey(oprf.SuiteRistretto255, oprf.BaseMode, state.OprfSeed[:], []byte("juicebox-oprf"))
+			oprfKey := r255.Scalar{}
+			err := oprfKey.UnmarshalBinary(state.OprfKey[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
-			blindedElement := group.Ristretto255.NewElement()
-			err = blindedElement.UnmarshalBinary(payload.OprfBlindedInput[:])
+			oprfBlindedInput := r255.Point{}
+			err = oprfBlindedInput.UnmarshalBinary(payload.OprfBlindedInput[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
-			server := oprf.NewServer(oprf.SuiteRistretto255, key)
-			req := oprf.EvaluationRequest{Elements: []oprf.Blinded{blindedElement}}
-			oprfBlindedResult, err := server.Evaluate(&req)
-			if err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				return nil, &record, err
-			}
+			oprfBlindedResult := r255.Point{}
+			oprfBlindedResult.ScalarMult(&oprfBlindedInput, &oprfKey)
 
-			serializedOprfBlindedResult, err := oprfBlindedResult.Elements[0].MarshalBinary()
+			serializedOprfBlindedResult, err := oprfBlindedResult.MarshalBinary()
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
@@ -260,9 +253,9 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
-					OprfBlindedResult:          types.OprfBlindedResult(serializedOprfBlindedResult),
-					MaskedUnlockKeyScalarShare: state.MaskedUnlockKeyScalarShare,
-					UnlockKeyCommitment:        state.UnlockKeyCommitment,
+					OprfBlindedResult:   types.OprfBlindedResult(serializedOprfBlindedResult),
+					UnlockKeyCommitment: state.UnlockKeyCommitment,
+					GuessesRemaining:    state.Policy.NumGuesses - state.GuessCount,
 				},
 			}, &record, nil
 		case records.NoGuesses:

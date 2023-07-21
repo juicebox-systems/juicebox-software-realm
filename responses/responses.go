@@ -11,9 +11,9 @@ type Recover1 struct {
 }
 
 type Recover2 struct {
-	OprfBlindedResult          types.OprfBlindedResult          `cbor:"oprf_blinded_result"`
-	MaskedUnlockKeyScalarShare types.MaskedUnlockKeyScalarShare `cbor:"masked_unlock_key_scalar_share"`
-	UnlockKeyCommitment        types.UnlockKeyCommitment        `cbor:"unlock_key_commitment"`
+	OprfBlindedResult   types.OprfBlindedResult   `cbor:"oprf_blinded_result"`
+	UnlockKeyCommitment types.UnlockKeyCommitment `cbor:"unlock_key_commitment"`
+	GuessesRemaining    uint16                    `cbor:"guesses_remaining"`
 }
 
 type Recover3 struct {

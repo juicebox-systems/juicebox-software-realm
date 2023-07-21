@@ -8,8 +8,7 @@ type Register1 struct{}
 
 type Register2 struct {
 	Version                            types.RegistrationVersion
-	OprfSeed                           types.OprfSeed                           `cbor:"oprf_seed"`
-	MaskedUnlockKeyScalarShare         types.MaskedUnlockKeyScalarShare         `cbor:"masked_unlock_key_scalar_share"`
+	OprfKey                            types.OprfKey                            `cbor:"oprf_key"`
 	UnlockKeyCommitment                types.UnlockKeyCommitment                `cbor:"unlock_key_commitment"`
 	UnlockKeyTag                       types.UnlockKeyTag                       `cbor:"unlock_key_tag"`
 	UserSecretEncryptionKeyScalarShare types.UserSecretEncryptionKeyScalarShare `cbor:"user_secret_encryption_key_scalar_share"`

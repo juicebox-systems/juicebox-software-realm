@@ -18,11 +18,10 @@ const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"
 
 type RegistrationVersion [16]byte
 
-type OprfSeed [32]byte
+type OprfKey [32]byte
 type OprfBlindedInput [32]byte
 type OprfBlindedResult [32]byte
 
-type MaskedUnlockKeyScalarShare [32]byte
 type UnlockKeyCommitment [32]byte
 type UnlockKeyTag [16]byte
 

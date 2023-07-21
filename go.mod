@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/bigtable v1.10.1
 	cloud.google.com/go/secretmanager v1.10.1
 	github.com/aws/aws-sdk-go v1.44.258
-	github.com/cloudflare/circl v1.3.3
+	github.com/bwesterb/go-ristretto v1.2.3
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/uuid v1.3.0
@@ -33,7 +33,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v0.13.0 // indirect
 	cloud.google.com/go/longrunning v0.4.1 // indirect
-	github.com/bwesterb/go-ristretto v1.2.3 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
