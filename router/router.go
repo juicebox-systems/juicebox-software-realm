@@ -9,10 +9,10 @@ import (
 	"reflect"
 	"strings"
 
-	r255 "github.com/bwesterb/go-ristretto"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	r255 "github.com/gtank/ristretto255"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
@@ -225,37 +225,31 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			record.RegistrationState = state
 
 			oprfKey := r255.Scalar{}
-			err := oprfKey.UnmarshalBinary(state.OprfKey[:])
+			err := oprfKey.Decode(state.OprfKey[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
-			oprfBlindedInput := r255.Point{}
-			err = oprfBlindedInput.UnmarshalBinary(payload.OprfBlindedInput[:])
+			oprfBlindedInput := r255.Element{}
+			err = oprfBlindedInput.Decode(payload.OprfBlindedInput[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
 
-			oprfBlindedResult := r255.Point{}
-			oprfBlindedResult.ScalarMult(&oprfBlindedInput, &oprfKey)
-
-			serializedOprfBlindedResult, err := oprfBlindedResult.MarshalBinary()
-			if err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				return nil, &record, err
-			}
+			oprfBlindedResult := r255.Element{}
+			oprfBlindedResult.ScalarMult(&oprfKey, &oprfBlindedInput)
 
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
-					OprfBlindedResult:   types.OprfBlindedResult(serializedOprfBlindedResult),
+					OprfBlindedResult:   types.OprfBlindedResult(oprfBlindedResult.Encode([]byte{})),
 					UnlockKeyCommitment: state.UnlockKeyCommitment,
-					GuessesRemaining:    state.Policy.NumGuesses - state.GuessCount,
+					NumGuesses:          state.Policy.NumGuesses,
+					GuessCount:          state.GuessCount,
 				},
 			}, &record, nil
 		case records.NoGuesses:

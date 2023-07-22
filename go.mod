@@ -6,10 +6,10 @@ require (
 	cloud.google.com/go/bigtable v1.10.1
 	cloud.google.com/go/secretmanager v1.10.1
 	github.com/aws/aws-sdk-go v1.44.258
-	github.com/bwesterb/go-ristretto v1.2.3
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/google/uuid v1.3.0
+	github.com/gtank/ristretto255 v0.1.2
 	github.com/labstack/echo-jwt/v4 v4.1.0
 	github.com/labstack/echo/v4 v4.10.2
 	github.com/stretchr/testify v1.8.3

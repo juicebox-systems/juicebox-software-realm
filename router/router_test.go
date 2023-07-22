@@ -92,7 +92,8 @@ func TestHandleRequest(t *testing.T) {
 	expectedResponse.Payload = responses.Recover2{
 		OprfBlindedResult:   oprfBlindedResult,
 		UnlockKeyCommitment: types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		GuessesRemaining:    1,
+		NumGuesses:          2,
+		GuessCount:          1,
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
