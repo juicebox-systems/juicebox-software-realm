@@ -44,25 +44,33 @@ func TestHandleRequest(t *testing.T) {
 
 	// Register 2
 	request.Payload = requests.Register2{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
 	}
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
-		GuessCount:                         0,
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
+		GuessCount:                0,
 	}
 	expectedResponse.Payload = responses.Register2{}
 	expectedResponse.Status = responses.Ok
@@ -90,6 +98,13 @@ func TestHandleRequest(t *testing.T) {
 		OprfBlindedInput: oprfBlindedInput,
 	}
 	expectedResponse.Payload = responses.Recover2{
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey: [32]byte{0xf6, 0xd7, 0x3c, 0xfa, 0x4, 0x62, 0x87, 0x44, 0xbf, 0x69, 0x39, 0x14, 0x7f, 0x85, 0x35, 0xbe, 0x14, 0xa0, 0xef, 0x13, 0xe3, 0xab, 0x29, 0x44, 0x13, 0x17, 0x7b, 0x54, 0x1f, 0x8, 0xda, 0x9},
+			Signature: types.OprfPublicKeySignature{
+				VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+				Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+			},
+		},
 		OprfBlindedResult:   oprfBlindedResult,
 		UnlockKeyCommitment: types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		NumGuesses:          2,
@@ -97,15 +112,19 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
-		GuessCount:                         1,
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
+		GuessCount:                1,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -119,25 +138,29 @@ func TestHandleRequest(t *testing.T) {
 		Version:      types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		UnlockKeyTag: types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
 	}
-	expectedUserSecretEncryptionKeyScalarShare := types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32))
-	expectedEncryptedUserSecret := types.EncryptedUserSecret(makeRepeatingByteArray(6, 145))
-	expectedEncryptedUserSecretCommitment := types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16))
+	expectedUserSecretEncryptionKeyScalarShare := types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32))
+	expectedEncryptedUserSecret := types.EncryptedSecret(makeRepeatingByteArray(6, 145))
+	expectedEncryptedUserSecretCommitment := types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16))
 	expectedResponse.Payload = responses.Recover3{
-		UserSecretEncryptionKeyScalarShare: &expectedUserSecretEncryptionKeyScalarShare,
-		EncryptedUserSecret:                &expectedEncryptedUserSecret,
-		EncryptedUserSecretCommitment:      &expectedEncryptedUserSecretCommitment,
+		EncryptionKeyScalarShare:  &expectedUserSecretEncryptionKeyScalarShare,
+		EncryptedSecret:           &expectedEncryptedUserSecret,
+		EncryptedSecretCommitment: &expectedEncryptedUserSecretCommitment,
 	}
 	expectedResponse.Status = responses.Ok
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
-		GuessCount:                         0,
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
+		GuessCount:                0,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -155,15 +178,19 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.BadUnlockKeyTag
 	expectedUserRecord.RegistrationState = records.Registered{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
-		GuessCount:                         1,
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
+		GuessCount:                1,
 	}
 	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
 	assert.NoError(t, err)
@@ -171,15 +198,19 @@ func TestHandleRequest(t *testing.T) {
 	assert.Equal(t, expectedResponse, *response)
 
 	userRecord.RegistrationState = records.Registered{
-		Version:                            types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
-		OprfKey:                            types.OprfKey(makeRepeatingByteArray(2, 32)),
-		UnlockKeyCommitment:                types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
-		UnlockKeyTag:                       types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
-		UserSecretEncryptionKeyScalarShare: types.UserSecretEncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
-		EncryptedUserSecret:                types.EncryptedUserSecret(makeRepeatingByteArray(6, 145)),
-		EncryptedUserSecretCommitment:      types.EncryptedUserSecretCommitment(makeRepeatingByteArray(7, 16)),
-		Policy:                             types.Policy{NumGuesses: 2},
-		GuessCount:                         2,
+		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
+		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
+		OprfPublicKeySignature: types.OprfPublicKeySignature{
+			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
+			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		},
+		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
+		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
+		EncryptionKeyScalarShare:  types.EncryptionKeyScalarShare(makeRepeatingByteArray(5, 32)),
+		EncryptedSecret:           types.EncryptedSecret(makeRepeatingByteArray(6, 145)),
+		EncryptedSecretCommitment: types.EncryptedSecretCommitment(makeRepeatingByteArray(7, 16)),
+		Policy:                    types.Policy{NumGuesses: 2},
+		GuessCount:                2,
 	}
 
 	// Recover 3 Wrong Unlock Tag, No Guesses Remaining

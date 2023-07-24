@@ -11,6 +11,7 @@ type Recover1 struct {
 }
 
 type Recover2 struct {
+	OprfSignedPublicKey types.OprfSignedPublicKey `cbor:"oprf_signed_public_key"`
 	OprfBlindedResult   types.OprfBlindedResult   `cbor:"oprf_blinded_result"`
 	UnlockKeyCommitment types.UnlockKeyCommitment `cbor:"unlock_key_commitment"`
 	NumGuesses          uint16                    `cbor:"num_guesses"`
@@ -18,10 +19,10 @@ type Recover2 struct {
 }
 
 type Recover3 struct {
-	UserSecretEncryptionKeyScalarShare *types.UserSecretEncryptionKeyScalarShare `cbor:"user_secret_encryption_key_scalar_share,omitempty"`
-	EncryptedUserSecret                *types.EncryptedUserSecret                `cbor:"encrypted_user_secret,omitempty"`
-	EncryptedUserSecretCommitment      *types.EncryptedUserSecretCommitment      `cbor:"encrypted_user_secret_commitment,omitempty"`
-	GuessesRemaining                   *uint16                                   `cbor:"guesses_remaining,omitempty"`
+	EncryptionKeyScalarShare  *types.EncryptionKeyScalarShare  `cbor:"encryption_key_scalar_share,omitempty"`
+	EncryptedSecret           *types.EncryptedSecret           `cbor:"encrypted_secret,omitempty"`
+	EncryptedSecretCommitment *types.EncryptedSecretCommitment `cbor:"encrypted_secret_commitment,omitempty"`
+	GuessesRemaining          *uint16                          `cbor:"guesses_remaining,omitempty"`
 }
 
 type Delete struct{}

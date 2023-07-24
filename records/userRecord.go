@@ -34,15 +34,16 @@ type UserRecord struct {
 }
 
 type Registered struct {
-	Version                            types.RegistrationVersion                `cbor:"version"`
-	OprfKey                            types.OprfKey                            `cbor:"oprf_key"`
-	UnlockKeyCommitment                types.UnlockKeyCommitment                `cbor:"unlock_key_commitment"`
-	UnlockKeyTag                       types.UnlockKeyTag                       `cbor:"unlock_key_tag"`
-	UserSecretEncryptionKeyScalarShare types.UserSecretEncryptionKeyScalarShare `cbor:"user_secret_encryption_key_scalar_share"`
-	EncryptedUserSecret                types.EncryptedUserSecret                `cbor:"encrypted_user_secret"`
-	EncryptedUserSecretCommitment      types.EncryptedUserSecretCommitment      `cbor:"encrypted_user_secret_commitment"`
-	GuessCount                         uint16                                   `cbor:"guess_count"`
-	Policy                             types.Policy                             `cbor:"policy"`
+	Version                   types.RegistrationVersion       `cbor:"version"`
+	OprfPrivateKey            types.OprfPrivateKey            `cbor:"oprf_private_key"`
+	OprfPublicKeySignature    types.OprfPublicKeySignature    `cbor:"oprf_public_key_signature"`
+	UnlockKeyCommitment       types.UnlockKeyCommitment       `cbor:"unlock_key_commitment"`
+	UnlockKeyTag              types.UnlockKeyTag              `cbor:"unlock_key_tag"`
+	EncryptionKeyScalarShare  types.EncryptionKeyScalarShare  `cbor:"encryption_key_scalar_share"`
+	EncryptedSecret           types.EncryptedSecret           `cbor:"encrypted_secret"`
+	EncryptedSecretCommitment types.EncryptedSecretCommitment `cbor:"encrypted_secret_commitment"`
+	GuessCount                uint16                          `cbor:"guess_count"`
+	Policy                    types.Policy                    `cbor:"policy"`
 }
 
 type NoGuesses struct{}

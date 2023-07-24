@@ -161,15 +161,16 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 		}, nil, nil
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
-			Version:                            payload.Version,
-			OprfKey:                            payload.OprfKey,
-			UnlockKeyCommitment:                payload.UnlockKeyCommitment,
-			UnlockKeyTag:                       payload.UnlockKeyTag,
-			UserSecretEncryptionKeyScalarShare: payload.UserSecretEncryptionKeyScalarShare,
-			EncryptedUserSecret:                payload.EncryptedUserSecret,
-			EncryptedUserSecretCommitment:      payload.EncryptedUserSecretCommitment,
-			GuessCount:                         0,
-			Policy:                             payload.Policy,
+			Version:                   payload.Version,
+			OprfPrivateKey:            payload.OprfPrivateKey,
+			OprfPublicKeySignature:    payload.OprfPublicKeySignature,
+			UnlockKeyCommitment:       payload.UnlockKeyCommitment,
+			UnlockKeyTag:              payload.UnlockKeyTag,
+			EncryptionKeyScalarShare:  payload.EncryptionKeyScalarShare,
+			EncryptedSecret:           payload.EncryptedSecret,
+			EncryptedSecretCommitment: payload.EncryptedSecretCommitment,
+			GuessCount:                0,
+			Policy:                    payload.Policy,
 		}
 		return &responses.SecretsResponse{
 			Status:  responses.Ok,
@@ -224,13 +225,16 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			oprfKey := r255.Scalar{}
-			err := oprfKey.Decode(state.OprfKey[:])
+			oprfPrivateKey := r255.Scalar{}
+			err := oprfPrivateKey.Decode(state.OprfPrivateKey[:])
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
+
+			oprfPublicKey := r255.Element{}
+			oprfPublicKey.ScalarBaseMult(&oprfPrivateKey)
 
 			oprfBlindedInput := r255.Element{}
 			err = oprfBlindedInput.Decode(payload.OprfBlindedInput[:])
@@ -241,11 +245,15 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			}
 
 			oprfBlindedResult := r255.Element{}
-			oprfBlindedResult.ScalarMult(&oprfKey, &oprfBlindedInput)
+			oprfBlindedResult.ScalarMult(&oprfPrivateKey, &oprfBlindedInput)
 
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
+					OprfSignedPublicKey: types.OprfSignedPublicKey{
+						PublicKey: [32]byte(oprfPublicKey.Encode([]byte{})),
+						Signature: state.OprfPublicKeySignature,
+					},
 					OprfBlindedResult:   types.OprfBlindedResult(oprfBlindedResult.Encode([]byte{})),
 					UnlockKeyCommitment: state.UnlockKeyCommitment,
 					NumGuesses:          state.Policy.NumGuesses,
@@ -294,9 +302,9 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover3{
-					UserSecretEncryptionKeyScalarShare: &state.UserSecretEncryptionKeyScalarShare,
-					EncryptedUserSecret:                &state.EncryptedUserSecret,
-					EncryptedUserSecretCommitment:      &state.EncryptedUserSecretCommitment,
+					EncryptionKeyScalarShare:  &state.EncryptionKeyScalarShare,
+					EncryptedSecret:           &state.EncryptedSecret,
+					EncryptedSecretCommitment: &state.EncryptedSecretCommitment,
 				},
 			}, &record, nil
 		case records.NoGuesses:
