@@ -22,14 +22,10 @@ type OprfPrivateKey [32]byte
 type OprfBlindedInput [32]byte
 type OprfBlindedResult [32]byte
 
-type OprfPublicKeySignature struct {
-	VerifyingKey [32]byte `cbor:"verifying_key"`
-	Bytes        [64]byte `cbor:"bytes"`
-}
-
 type OprfSignedPublicKey struct {
-	PublicKey [32]byte               `cbor:"public_key"`
-	Signature OprfPublicKeySignature `cbor:"signature"`
+	PublicKey    [32]byte `cbor:"public_key"`
+	VerifyingKey [32]byte `cbor:"verifying_key"`
+	Signature    [64]byte `cbor:"signature"`
 }
 
 type UnlockKeyCommitment [32]byte

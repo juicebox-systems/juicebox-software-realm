@@ -46,9 +46,10 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Register2{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
@@ -60,9 +61,10 @@ func TestHandleRequest(t *testing.T) {
 	expectedUserRecord.RegistrationState = records.Registered{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
@@ -99,11 +101,9 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Payload = responses.Recover2{
 		OprfSignedPublicKey: types.OprfSignedPublicKey{
-			PublicKey: [32]byte{0xf6, 0xd7, 0x3c, 0xfa, 0x4, 0x62, 0x87, 0x44, 0xbf, 0x69, 0x39, 0x14, 0x7f, 0x85, 0x35, 0xbe, 0x14, 0xa0, 0xef, 0x13, 0xe3, 0xab, 0x29, 0x44, 0x13, 0x17, 0x7b, 0x54, 0x1f, 0x8, 0xda, 0x9},
-			Signature: types.OprfPublicKeySignature{
-				VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-				Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
-			},
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		OprfBlindedResult:   oprfBlindedResult,
 		UnlockKeyCommitment: types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
@@ -114,9 +114,10 @@ func TestHandleRequest(t *testing.T) {
 	expectedUserRecord.RegistrationState = records.Registered{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
@@ -150,9 +151,10 @@ func TestHandleRequest(t *testing.T) {
 	expectedUserRecord.RegistrationState = records.Registered{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
@@ -180,9 +182,10 @@ func TestHandleRequest(t *testing.T) {
 	expectedUserRecord.RegistrationState = records.Registered{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
@@ -200,9 +203,10 @@ func TestHandleRequest(t *testing.T) {
 	userRecord.RegistrationState = records.Registered{
 		Version:        types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 		OprfPrivateKey: types.OprfPrivateKey(makeRepeatingByteArray(2, 32)),
-		OprfPublicKeySignature: types.OprfPublicKeySignature{
-			VerifyingKey: [32]byte(makeRepeatingByteArray(1, 32)),
-			Bytes:        [64]byte(makeRepeatingByteArray(1, 64)),
+		OprfSignedPublicKey: types.OprfSignedPublicKey{
+			PublicKey:    [32]byte(makeRepeatingByteArray(1, 32)),
+			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
+			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
 		UnlockKeyCommitment:       types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		UnlockKeyTag:              types.UnlockKeyTag(makeRepeatingByteArray(4, 16)),
