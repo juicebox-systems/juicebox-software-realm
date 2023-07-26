@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -12,14 +13,13 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	r255 "github.com/gtank/ristretto255"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-software-realm/voprf"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -225,30 +225,24 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			oprfPrivateKey := r255.Scalar{}
-			err := oprfPrivateKey.Decode(state.OprfPrivateKey[:])
+			oprfBlindedResult, oprfProof, err := voprf.BlindEvaluate(
+				&state.OprfPrivateKey,
+				&state.OprfSignedPublicKey.PublicKey,
+				&payload.OprfBlindedInput,
+				cryptoRand.Reader,
+			)
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
-
-			oprfBlindedInput := r255.Element{}
-			err = oprfBlindedInput.Decode(payload.OprfBlindedInput[:])
-			if err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				return nil, &record, err
-			}
-
-			oprfBlindedResult := r255.Element{}
-			oprfBlindedResult.ScalarMult(&oprfPrivateKey, &oprfBlindedInput)
 
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
 					OprfSignedPublicKey: state.OprfSignedPublicKey,
-					OprfBlindedResult:   types.OprfBlindedResult(oprfBlindedResult.Encode([]byte{})),
+					OprfBlindedResult:   *oprfBlindedResult,
+					OprfProof:           *oprfProof,
 					UnlockKeyCommitment: state.UnlockKeyCommitment,
 					NumGuesses:          state.Policy.NumGuesses,
 					GuessCount:          state.GuessCount,

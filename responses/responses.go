@@ -13,6 +13,7 @@ type Recover1 struct {
 type Recover2 struct {
 	OprfSignedPublicKey types.OprfSignedPublicKey `cbor:"oprf_signed_public_key"`
 	OprfBlindedResult   types.OprfBlindedResult   `cbor:"oprf_blinded_result"`
+	OprfProof           types.OprfProof           `cbor:"oprf_proof"`
 	UnlockKeyCommitment types.UnlockKeyCommitment `cbor:"unlock_key_commitment"`
 	NumGuesses          uint16                    `cbor:"num_guesses"`
 	GuessCount          uint16                    `cbor:"guess_count"`
