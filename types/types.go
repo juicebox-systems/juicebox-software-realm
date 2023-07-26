@@ -19,13 +19,19 @@ const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"
 type RegistrationVersion [16]byte
 
 type OprfPrivateKey [32]byte
+type OprfPublicKey [32]byte
 type OprfBlindedInput [32]byte
 type OprfBlindedResult [32]byte
 
 type OprfSignedPublicKey struct {
-	PublicKey    [32]byte `cbor:"public_key"`
-	VerifyingKey [32]byte `cbor:"verifying_key"`
-	Signature    [64]byte `cbor:"signature"`
+	PublicKey    OprfPublicKey `cbor:"public_key"`
+	VerifyingKey [32]byte      `cbor:"verifying_key"`
+	Signature    [64]byte      `cbor:"signature"`
+}
+
+type OprfProof struct {
+	C     [32]byte `cbor:"c"`
+	BetaZ [32]byte `cbor:"beta_z"`
 }
 
 type UnlockKeyCommitment [32]byte
