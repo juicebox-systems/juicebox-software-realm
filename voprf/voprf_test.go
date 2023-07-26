@@ -38,25 +38,23 @@ func TestVectors(t *testing.T) {
 		t.Fatalf("Failed to read test vectors: %v", err)
 	}
 
-	var test_vectors []TestVector
-	err = json.Unmarshal(bytes, &test_vectors)
+	var testVectors []TestVector
+	err = json.Unmarshal(bytes, &testVectors)
 	if err != nil {
 		t.Fatalf("Failed to parse test vectors from JSON: %v", err)
 	}
 
-	if len(test_vectors) < 3 {
-		t.Fatalf("Expected to find at least 3 test vectors")
-	}
+	assert.GreaterOrEqual(t, len(testVectors), 3)
 
-	for i := range test_vectors {
-		vector := &test_vectors[i]
+	for i := range testVectors {
+		vector := &testVectors[i]
 		t.Run(vector.Name, func(t *testing.T) {
-			run_test_vector(t, vector)
+			runTestVector(t, vector)
 		})
 	}
 }
 
-func run_test_vector(t *testing.T, vector *TestVector) {
+func runTestVector(t *testing.T, vector *TestVector) {
 	privateKeyBytes, err := hex.DecodeString(vector.Outputs.PrivateKey)
 	assert.Nil(t, err)
 	privateKey := types.OprfPrivateKey(privateKeyBytes)
