@@ -14,21 +14,20 @@ import (
 type TestVector struct {
 	Name   string
 	Inputs struct {
-		Input          string `json:"input"`
-		PrivateKeySeed string `json:"private_key_seed"`
-		BlindSeed      string `json:"blind_seed"`
-		BetaTSeed      string `json:"beta_t_seed"`
+		Input              string `json:"input"`
+		PrivateKeySeed     string `json:"private_key_seed"`
+		BlindingFactorSeed string `json:"blinding_factor_seed"`
+		BetaTSeed          string `json:"beta_t_seed"`
 	}
 	Outputs struct {
-		PrivateKey    string `json:"private_key"`
-		PublicKey     string `json:"public_key"`
-		InputHash     string `json:"input_hash"`
-		Blind         string `json:"blind"`
-		BlindedInput  string `json:"blinded_input"`
-		BlindedOutput string `json:"blinded_output"`
-		ProofC        string `json:"proof_c"`
-		ProofBetaZ    string `json:"proof_beta_z"`
-		Output        string `json:"proof_output"`
+		PrivateKey     string `json:"private_key"`
+		PublicKey      string `json:"public_key"`
+		BlindingFactor string `json:"blinding_factor"`
+		BlindedInput   string `json:"blinded_input"`
+		BlindedOutput  string `json:"blinded_output"`
+		ProofC         string `json:"proof_c"`
+		ProofBetaZ     string `json:"proof_beta_z"`
+		Output         string `json:"proof_output"`
 	}
 }
 

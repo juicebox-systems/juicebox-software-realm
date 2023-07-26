@@ -43,18 +43,12 @@ func hashToChallenge(
 	vT *r255.Element,
 	wT *r255.Element,
 ) *r255.Scalar {
-	// The hash is over 2*vT and 2*wT as an optimization for the Rust
-	// implementation. Here, we just double vT and wT to be compatible, with a
-	// small performance penalty.
-	doubleVT := r255.NewElement().Add(vT, vT)
-	doubleWT := r255.NewElement().Add(wT, wT)
-
 	h := []byte("Juicebox_DLEQ_2023_1;")
 	h = u.Encode(h)
 	h = append(h, v[:]...)
 	h = w.Encode(h)
-	h = doubleVT.Encode(h)
-	h = doubleWT.Encode(h)
+	h = vT.Encode(h)
+	h = wT.Encode(h)
 
 	hash := sha512.Sum512(h)
 	return r255.NewScalar().FromUniformBytes(hash[:])
