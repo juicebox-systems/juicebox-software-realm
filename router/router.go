@@ -68,7 +68,7 @@ func RunRouter(
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading from record store")
 		}
 
-		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request)
+		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request, cryptoRand.Reader)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error processing request")
 		}
@@ -148,7 +148,7 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 	return &userRecordID, &tenantName, nil
 }
 
-func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
+func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest, cryptoRng io.Reader) (*responses.SecretsResponse, *records.UserRecord, error) {
 	_, span := otel.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
 	defer span.End()
 	span.SetAttributes(attribute.String("tenant", tenantID))
@@ -229,7 +229,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 				&state.OprfPrivateKey,
 				&state.OprfSignedPublicKey.PublicKey,
 				&payload.OprfBlindedInput,
-				cryptoRand.Reader,
+				cryptoRng,
 			)
 			if err != nil {
 				span.RecordError(err)
