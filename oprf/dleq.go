@@ -1,4 +1,4 @@
-package voprf
+package oprf
 
 import (
 	"crypto/sha512"

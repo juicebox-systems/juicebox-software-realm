@@ -13,13 +13,13 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/oprf"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
-	"github.com/juicebox-software-realm/voprf"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -225,7 +225,7 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			oprfBlindedResult, oprfProof, err := voprf.BlindEvaluate(
+			oprfBlindedResult, oprfProof, err := oprf.BlindEvaluate(
 				&state.OprfPrivateKey,
 				&state.OprfSignedPublicKey.PublicKey,
 				&payload.OprfBlindedInput,

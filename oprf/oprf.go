@@ -1,8 +1,8 @@
-// Package voprf implements the server side of a VOPRF.
+// Package oprf implements the server side of a robust OPRF.
 //
-// The VOPRF is based on 2HashDH and a Chaum-Pedersen DLEQ proof. See the Rust
+// The OPRF is based on 2HashDH and a Chaum-Pedersen DLEQ proof. See the Rust
 // implementation in the Juicebox SDK for more details.
-package voprf
+package oprf
 
 import (
 	"io"
@@ -11,7 +11,7 @@ import (
 	"github.com/juicebox-software-realm/types"
 )
 
-// BlindEvaluate runs the VOPRF evaluation on the server.
+// BlindEvaluate runs the OPRF evaluation and generates a proof on the server.
 //
 // It returns errors from decoding inputs and reading the given RNG.
 func BlindEvaluate(
