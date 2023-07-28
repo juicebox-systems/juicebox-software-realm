@@ -1,6 +1,8 @@
 package router
 
 import (
+	"bytes"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"testing"
@@ -37,7 +39,7 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Register1{}
 	expectedResponse.Payload = responses.Register1{}
 	expectedResponse.Status = responses.Ok
-	response, updatedRecord, err := HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err := HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -76,7 +78,7 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Payload = responses.Register2{}
 	expectedResponse.Status = responses.Ok
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -89,7 +91,7 @@ func TestHandleRequest(t *testing.T) {
 		Version: types.RegistrationVersion(makeRepeatingByteArray(1, 16)),
 	}
 	expectedResponse.Status = responses.Ok
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -105,7 +107,11 @@ func TestHandleRequest(t *testing.T) {
 			VerifyingKey: [32]byte(makeRepeatingByteArray(2, 32)),
 			Signature:    [64]byte(makeRepeatingByteArray(3, 64)),
 		},
-		OprfBlindedResult:   oprfBlindedResult,
+		OprfBlindedResult: oprfBlindedResult,
+		OprfProof: types.OprfProof{
+			C:     [32]uint8{0xfc, 0x9a, 0xdf, 0x81, 0x39, 0xc3, 0xc9, 0x2a, 0x14, 0x66, 0x1f, 0x31, 0x4a, 0xe1, 0x9b, 0x96, 0xc4, 0x48, 0x6, 0x28, 0xed, 0xcb, 0xac, 0xff, 0x92, 0x43, 0xa4, 0x7b, 0xe9, 0xe0, 0xd8, 0x2},
+			BetaZ: [32]uint8{0x62, 0x14, 0xeb, 0x40, 0x77, 0x72, 0x3d, 0xde, 0x98, 0xbd, 0x51, 0x9a, 0x77, 0x7d, 0x5f, 0x54, 0xc8, 0x17, 0xad, 0xd, 0x2, 0xc4, 0x40, 0xf9, 0x93, 0x96, 0xb9, 0x8, 0xa6, 0xd7, 0x77, 0x3},
+		},
 		UnlockKeyCommitment: types.UnlockKeyCommitment(makeRepeatingByteArray(3, 32)),
 		NumGuesses:          2,
 		GuessCount:          1,
@@ -127,7 +133,10 @@ func TestHandleRequest(t *testing.T) {
 		Policy:                    types.Policy{NumGuesses: 2},
 		GuessCount:                1,
 	}
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	betaTSeed, err := hex.DecodeString("d26f293ccf9cb05517a385986605134a1ce6036ae560bbea8f32745db5a13746c25db6612a8ff96c03a84b5b963061b405fca21a6b80ddfbbb9f4b6a5deffe68")
+	assert.NoError(t, err)
+	rng := bytes.NewReader(betaTSeed)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, rng)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -164,7 +173,7 @@ func TestHandleRequest(t *testing.T) {
 		Policy:                    types.Policy{NumGuesses: 2},
 		GuessCount:                0,
 	}
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -195,7 +204,7 @@ func TestHandleRequest(t *testing.T) {
 		Policy:                    types.Policy{NumGuesses: 2},
 		GuessCount:                1,
 	}
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -228,7 +237,7 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Status = responses.BadUnlockKeyTag
 	expectedUserRecord.RegistrationState = records.NoGuesses{}
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -239,7 +248,7 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Recover1{}
 	expectedResponse.Payload = responses.Recover1{}
 	expectedResponse.Status = responses.NoGuesses
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -250,7 +259,7 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Payload = responses.Recover2{}
 	expectedResponse.Status = responses.NoGuesses
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -261,7 +270,7 @@ func TestHandleRequest(t *testing.T) {
 	}
 	expectedResponse.Payload = responses.Recover3{}
 	expectedResponse.Status = responses.NoGuesses
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -272,7 +281,7 @@ func TestHandleRequest(t *testing.T) {
 	expectedUserRecord.RegistrationState = records.NotRegistered{}
 	expectedResponse.Payload = responses.Delete{}
 	expectedResponse.Status = responses.Ok
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedUserRecord, *updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -283,7 +292,7 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Recover1{}
 	expectedResponse.Payload = responses.Recover1{}
 	expectedResponse.Status = responses.NotRegistered
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -292,7 +301,7 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Recover2{}
 	expectedResponse.Payload = responses.Recover2{}
 	expectedResponse.Status = responses.NotRegistered
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -301,7 +310,7 @@ func TestHandleRequest(t *testing.T) {
 	request.Payload = requests.Recover3{}
 	expectedResponse.Payload = responses.Recover3{}
 	expectedResponse.Status = responses.NotRegistered
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -317,7 +326,7 @@ func TestHandleRequest(t *testing.T) {
 	guessesRemaining = 0
 	expectedResponse.Payload = responses.Recover2{}
 	expectedResponse.Status = responses.VersionMismatch
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
@@ -333,14 +342,14 @@ func TestHandleRequest(t *testing.T) {
 	guessesRemaining = 0
 	expectedResponse.Payload = responses.Recover3{}
 	expectedResponse.Status = responses.VersionMismatch
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.NoError(t, err)
 	assert.Nil(t, updatedRecord)
 	assert.Equal(t, expectedResponse, *response)
 
 	// Invalid request
 	request.Payload = "invalid"
-	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request)
+	response, updatedRecord, err = HandleRequest(c, tenantID, userRecord, request, nil)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "unexpected request type")
 	assert.Nil(t, response)

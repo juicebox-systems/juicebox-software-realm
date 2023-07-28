@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -12,14 +13,13 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	r255 "github.com/gtank/ristretto255"
+	"github.com/juicebox-software-realm/oprf"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
-	"github.com/juicebox-software-realm/types"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -68,7 +68,7 @@ func RunRouter(
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading from record store")
 		}
 
-		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request)
+		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request, cryptoRand.Reader)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error processing request")
 		}
@@ -148,7 +148,7 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 	return &userRecordID, &tenantName, nil
 }
 
-func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest) (*responses.SecretsResponse, *records.UserRecord, error) {
+func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest, cryptoRng io.Reader) (*responses.SecretsResponse, *records.UserRecord, error) {
 	_, span := otel.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
 	defer span.End()
 	span.SetAttributes(attribute.String("tenant", tenantID))
@@ -225,30 +225,24 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			state.GuessCount++
 			record.RegistrationState = state
 
-			oprfPrivateKey := r255.Scalar{}
-			err := oprfPrivateKey.Decode(state.OprfPrivateKey[:])
+			oprfBlindedResult, oprfProof, err := oprf.BlindEvaluate(
+				&state.OprfPrivateKey,
+				&state.OprfSignedPublicKey.PublicKey,
+				&payload.OprfBlindedInput,
+				cryptoRng,
+			)
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return nil, &record, err
 			}
-
-			oprfBlindedInput := r255.Element{}
-			err = oprfBlindedInput.Decode(payload.OprfBlindedInput[:])
-			if err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				return nil, &record, err
-			}
-
-			oprfBlindedResult := r255.Element{}
-			oprfBlindedResult.ScalarMult(&oprfPrivateKey, &oprfBlindedInput)
 
 			return &responses.SecretsResponse{
 				Status: responses.Ok,
 				Payload: responses.Recover2{
 					OprfSignedPublicKey: state.OprfSignedPublicKey,
-					OprfBlindedResult:   types.OprfBlindedResult(oprfBlindedResult.Encode([]byte{})),
+					OprfBlindedResult:   *oprfBlindedResult,
+					OprfProof:           *oprfProof,
 					UnlockKeyCommitment: state.UnlockKeyCommitment,
 					NumGuesses:          state.Policy.NumGuesses,
 					GuessCount:          state.GuessCount,
