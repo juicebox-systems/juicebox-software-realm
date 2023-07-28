@@ -16,7 +16,7 @@ func generateProof(
 	cryptoRng io.Reader,
 ) (*types.OprfProof, error) {
 	var betaTSeed [64]byte
-	_, err := cryptoRng.Read(betaTSeed[:])
+	_, err := io.ReadFull(cryptoRng, betaTSeed[:])
 	if err != nil {
 		return nil, err
 	}
