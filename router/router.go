@@ -8,11 +8,9 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/oprf"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
@@ -20,6 +18,7 @@ import (
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
 	"github.com/juicebox-software-realm/secrets"
+	"github.com/juicebox-software-realm/types"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -29,7 +28,7 @@ import (
 )
 
 func RunRouter(
-	realmID uuid.UUID,
+	realmID types.RealmID,
 	provider *providers.Provider,
 	port uint64,
 ) {
@@ -106,7 +105,7 @@ func RunRouter(
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
-func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *string, error) {
+func userRecordID(c echo.Context, realmID types.RealmID) (*records.UserRecordID, *string, error) {
 	token, ok := c.Get("user").(*jwt.Token)
 	if !ok {
 		return nil, nil, errors.New("user is not a jwt token")
@@ -117,7 +116,7 @@ func userRecordID(c echo.Context, realmID uuid.UUID) (*records.UserRecordID, *st
 		return nil, nil, errors.New("jwt claims of unexpected type")
 	}
 
-	if len(claims.Audience) != 1 || claims.Audience[0] != strings.ReplaceAll(realmID.String(), "-", "") {
+	if len(claims.Audience) != 1 || claims.Audience[0] != realmID.String() {
 		return nil, nil, errors.New("jwt claims contains invalid 'aud' field")
 	}
 

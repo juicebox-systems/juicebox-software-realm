@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
+	"github.com/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -26,7 +26,7 @@ const secretsCollection string = "tenantSecrets"
 const secretsVersionKey string = "version"
 const secretsSecretKey string = "secret"
 
-func NewMongoSecretsManager(ctx context.Context, realmID uuid.UUID) (*MongoSecretsManager, error) {
+func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (*MongoSecretsManager, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"NewMongoSecretsManager",

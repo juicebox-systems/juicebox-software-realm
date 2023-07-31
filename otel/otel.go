@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/google/uuid"
+	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -33,7 +33,7 @@ func IncrementInt64Counter(ctx context.Context, name string, attributes ...attri
 	return nil
 }
 
-func initResource(realmID uuid.UUID) *resource.Resource {
+func initResource(realmID types.RealmID) *resource.Resource {
 	resource, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
@@ -48,7 +48,7 @@ func initResource(realmID uuid.UUID) *resource.Resource {
 	return resource
 }
 
-func InitTraceProvider(ctx context.Context, realmID uuid.UUID) *sdktrace.TracerProvider {
+func InitTraceProvider(ctx context.Context, realmID types.RealmID) *sdktrace.TracerProvider {
 	resource := initResource(realmID)
 
 	opts := []sdktrace.TracerProviderOption{
@@ -74,7 +74,7 @@ func InitTraceProvider(ctx context.Context, realmID uuid.UUID) *sdktrace.TracerP
 	return tp
 }
 
-func InitMeterProvider(ctx context.Context, realmID uuid.UUID) *sdkmetric.MeterProvider {
+func InitMeterProvider(ctx context.Context, realmID types.RealmID) *sdkmetric.MeterProvider {
 	resource := initResource(realmID)
 
 	opts := []sdkmetric.Option{

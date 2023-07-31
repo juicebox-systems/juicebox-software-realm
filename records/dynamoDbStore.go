@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
@@ -28,7 +27,7 @@ const primaryKeyName string = "recordId"
 const userRecordAttributeName string = "serializedUserRecord"
 const versionAttributeName string = "version"
 
-func NewDynamoDbRecordStore(ctx context.Context, realmID uuid.UUID) (*DynamoDbRecordStore, error) {
+func NewDynamoDbRecordStore(ctx context.Context, realmID types.RealmID) (*DynamoDbRecordStore, error) {
 	_, span := otel.StartSpan(
 		ctx,
 		"NewDynamoDbRecordStore",

@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 )
 
 type ProviderName int
@@ -12,6 +13,12 @@ const (
 	Mongo
 	Memory
 )
+
+type RealmID [16]byte
+
+func (id RealmID) String() string {
+	return hex.EncodeToString(id[:])
+}
 
 const JuiceboxRealmDatabasePrefix string = "jb-sw-realm-"
 const JuiceboxTenantSecretPrefix string = "jb-sw-tenant-"

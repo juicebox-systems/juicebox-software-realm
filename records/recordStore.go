@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
@@ -22,7 +21,7 @@ type RecordStore interface {
 	WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error
 }
 
-func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID uuid.UUID) (RecordStore, error) {
+func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID types.RealmID) (RecordStore, error) {
 	ctx, span := otel.StartSpan(ctx, "NewRecordStore")
 	defer span.End()
 

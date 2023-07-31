@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/requests"
 	"github.com/juicebox-software-realm/responses"
@@ -360,12 +358,11 @@ var UserRecordID = userRecordID
 
 func TestUserRecordID(t *testing.T) {
 	// Create a mock user token
-	realmID, err := uuid.NewRandom()
-	assert.NoError(t, err)
+	realmID := types.RealmID(makeRepeatingByteArray(0xFF, 16))
 	claims := &jwt.RegisteredClaims{
 		Subject:  "artemis",
 		Issuer:   "apollo",
-		Audience: []string{strings.ReplaceAll(realmID.String(), "-", "")},
+		Audience: []string{realmID.String()},
 	}
 	header := map[string]interface{}{
 		"kid": "apollo:1",
@@ -452,8 +449,7 @@ func TestUserRecordID(t *testing.T) {
 		Header: header,
 		Claims: claims,
 	}
-	expectedRealmID, err := uuid.NewRandom()
-	assert.NoError(t, err)
+	expectedRealmID := types.RealmID(makeRepeatingByteArray(0xAA, 16))
 	c.Set("user", token)
 	userRecordID, tenantID, err = UserRecordID(c, expectedRealmID)
 	assert.Error(t, err)

@@ -10,7 +10,6 @@ import (
 
 	"cloud.google.com/go/bigtable"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
@@ -27,7 +26,7 @@ type BigtableRecordStore struct {
 
 const familyName = "f"
 
-func NewBigtableRecordStore(ctx context.Context, realmID uuid.UUID) (*BigtableRecordStore, error) {
+func NewBigtableRecordStore(ctx context.Context, realmID types.RealmID) (*BigtableRecordStore, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"NewBigtableRecordStore",

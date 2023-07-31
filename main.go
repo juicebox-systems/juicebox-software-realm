@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/router"
@@ -19,8 +20,6 @@ func main() {
 		"id",
 		"",
 		`A 16-byte hex string identifying this realm. (default random)
-
-We recommend using a UUID, but any 16-byte hex string is valid.
 
 Note: Changing this id for an existing realm will result in data loss.`,
 	)
@@ -58,7 +57,7 @@ memory:
 
 	flag.Parse()
 
-	var realmID uuid.UUID
+	var realmID types.RealmID
 
 	// if no id was provided, check if the REALM_ID env
 	// variable is set before generating a random one
@@ -67,19 +66,24 @@ memory:
 	}
 
 	if *idString == "" {
-		randomID, err := uuid.NewRandom()
+		var randomID [16]byte
+		_, err := cryptoRand.Read(randomID[:])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s, exiting...\n", err)
 			os.Exit(1)
 		}
-		realmID = randomID
+		realmID = types.RealmID(randomID)
 	} else {
-		parsedID, err := uuid.Parse(*idString)
+		parsedID, err := hex.DecodeString(*idString)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
 			os.Exit(2)
 		}
-		realmID = parsedID
+		if len(parsedID) != 16 {
+			fmt.Fprintf(os.Stderr, "\nInvalid id length %d, exiting...\n", len(parsedID))
+			os.Exit(3)
+		}
+		realmID = types.RealmID([16]byte(parsedID))
 	}
 
 	if envPortString := os.Getenv("PORT"); envPortString != "" && *port == 0 {
@@ -105,7 +109,7 @@ memory:
 			providerName = types.Memory
 		} else {
 			fmt.Fprintf(os.Stderr, "\n%v, exiting...\n", err)
-			os.Exit(3)
+			os.Exit(5)
 		}
 	}
 
@@ -128,7 +132,7 @@ memory:
 	provider, err := providers.NewProvider(ctx, providerName, realmID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
-		os.Exit(4)
+		os.Exit(6)
 	}
 
 	router.RunRouter(realmID, provider, *port)

@@ -11,8 +11,6 @@ Usage of jb-sw-realm:
   -id string
     	A 16-byte hex string identifying this realm. (default random)
 
-    	We recommend using a UUID, but any 16-byte hex string is valid.
-
     	Note: Changing this id for an existing realm will result in data loss.
   -port int
     	The port to run the server on. (default 8080)

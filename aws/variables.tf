@@ -1,5 +1,5 @@
 variable "realm_id" {
-  description = "A UUID that identifies your realm"
+  description = "A 16-byte hex string that identifies your realm"
   type        = string
 }
 

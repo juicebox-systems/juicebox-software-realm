@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/records"
 	"github.com/juicebox-software-realm/secrets"
@@ -36,7 +35,7 @@ func Parse(nameString string) (types.ProviderName, error) {
 	}
 }
 
-func NewProvider(ctx context.Context, name types.ProviderName, realmID uuid.UUID) (*Provider, error) {
+func NewProvider(ctx context.Context, name types.ProviderName, realmID types.RealmID) (*Provider, error) {
 	ctx, span := otel.StartSpan(ctx, "NewProvider")
 	defer span.End()
 

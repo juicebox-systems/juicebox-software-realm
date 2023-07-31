@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/google/uuid"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
@@ -28,7 +27,7 @@ const userRecordsCollection string = "userRecords"
 const serializedUserRecordKey string = "serializedUserRecord"
 const versionKey string = "version"
 
-func NewMongoRecordStore(ctx context.Context, realmID uuid.UUID) (*MongoRecordStore, error) {
+func NewMongoRecordStore(ctx context.Context, realmID types.RealmID) (*MongoRecordStore, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"NewMongoRecordStore",
