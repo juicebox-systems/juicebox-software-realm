@@ -49,7 +49,7 @@ func RunRouter(
 	})
 
 	e.POST("/req", func(c echo.Context) error {
-		sdkVersion, err := semver.NewVersion(c.Request().Header.Get("Juicebox-Version"))
+		sdkVersion, err := semver.NewVersion(c.Request().Header.Get("X-Juicebox-Version"))
 		hasValidVersion := err == nil && (sdkVersion.Major() > Version.Major() || sdkVersion.Major() == Version.Major() && sdkVersion.Minor() >= Version.Minor())
 		if !hasValidVersion {
 			return contextAwareError(c, http.StatusUpgradeRequired, "SDK upgrade required")
