@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 
+	semver "github.com/Masterminds/semver/v3"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/juicebox-software-realm/oprf"
@@ -26,6 +27,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
+
+var Version = semver.MustParse("0.2.0")
 
 func RunRouter(
 	realmID types.RealmID,
@@ -46,6 +49,12 @@ func RunRouter(
 	})
 
 	e.POST("/req", func(c echo.Context) error {
+		sdkVersion, err := semver.NewVersion(c.Request().Header.Get("Juicebox-Version"))
+		hasValidVersion := err == nil && (sdkVersion.Major() > Version.Major() || sdkVersion.Major() == Version.Major() && sdkVersion.Minor() >= Version.Minor())
+		if !hasValidVersion {
+			return contextAwareError(c, http.StatusUpgradeRequired, "SDK upgrade required")
+		}
+
 		userRecordID, tenantID, err := userRecordID(c, realmID)
 		if err != nil {
 			return contextAwareError(c, http.StatusUnauthorized, "Error reading user from jwt")

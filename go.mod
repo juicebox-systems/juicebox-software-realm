@@ -5,6 +5,7 @@ go 1.20
 require (
 	cloud.google.com/go/bigtable v1.10.1
 	cloud.google.com/go/secretmanager v1.10.1
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/aws/aws-sdk-go v1.44.258
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/golang-jwt/jwt/v4 v4.4.3
