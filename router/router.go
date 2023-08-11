@@ -45,7 +45,7 @@ func RunRouter(
 	e.Use(otelecho.Middleware("echo-router"))
 
 	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID})
+		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID.String()})
 	})
 
 	e.POST("/req", func(c echo.Context) error {
