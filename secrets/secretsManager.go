@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"

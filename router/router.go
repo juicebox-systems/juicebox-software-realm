@@ -11,7 +11,7 @@ import (
 
 	semver "github.com/Masterminds/semver/v3"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-software-realm/oprf"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
