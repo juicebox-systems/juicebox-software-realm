@@ -9,11 +9,16 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/juicebox-software-realm/otel"
 	"github.com/juicebox-software-realm/providers"
 	"github.com/juicebox-software-realm/router"
 	"github.com/juicebox-software-realm/types"
 )
+
+func init() {
+	jwt.DecodeStrict = true
+}
 
 func main() {
 	idString := flag.String(

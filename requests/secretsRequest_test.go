@@ -26,9 +26,16 @@ func TestUnmarshalCBOR(t *testing.T) {
 	}, sr.Payload)
 
 	// Test with an unknown payload
-	data = []byte{0x64, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e}
+	data = []byte{0x64, 0x55, 0x6e, 0x6b, 0x6e}
 	sr = &SecretsRequest{}
 	err = sr.UnmarshalCBOR(data)
 	assert.NoError(t, err)
+	assert.Nil(t, sr.Payload)
+
+	// Test with unknown payload and extraneous bytes
+	data = []byte{0x64, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e}
+	sr = &SecretsRequest{}
+	err = sr.UnmarshalCBOR(data)
+	assert.Error(t, err)
 	assert.Nil(t, sr.Payload)
 }
