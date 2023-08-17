@@ -115,7 +115,7 @@ resource "aws_elastic_beanstalk_application" "jb_sw_realm" {
 resource "aws_elastic_beanstalk_environment" "jb_sw_realm" {
   name                   = "jb-sw-realm"
   application            = aws_elastic_beanstalk_application.jb_sw_realm.name
-  solution_stack_name    = "64bit Amazon Linux 2 v3.7.2 running Go 1"
+  solution_stack_name    = "64bit Amazon Linux 2 v3.7.5 running Go 1" # Go 1.20.6
   tier                   = "WebServer"
   wait_for_ready_timeout = "20m"
 
