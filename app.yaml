@@ -4,7 +4,7 @@ service_account: {{YOUR_SERVICE_ACCOUNT_EMAIL}}
 
 runtime_config:
     operating_system: ubuntu22
-    runtime_version: "1.20"
+    runtime_version: "1.21"
 
 liveness_check:
   path: "/"
