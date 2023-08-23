@@ -8,7 +8,7 @@ import (
 	"io"
 
 	r255 "github.com/gtank/ristretto255"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 )
 
 // BlindEvaluate runs the OPRF evaluation and generates a proof on the server.

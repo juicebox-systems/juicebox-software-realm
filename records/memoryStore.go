@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"

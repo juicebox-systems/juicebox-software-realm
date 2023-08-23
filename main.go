@@ -9,10 +9,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/juicebox-software-realm/otel"
-	"github.com/juicebox-software-realm/providers"
-	"github.com/juicebox-software-realm/router"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/providers"
+	"github.com/juicebox-systems/juicebox-software-realm/router"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 )
 
 func main() {

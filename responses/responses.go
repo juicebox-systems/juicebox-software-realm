@@ -1,6 +1,6 @@
 package responses
 
-import "github.com/juicebox-software-realm/types"
+import "github.com/juicebox-systems/juicebox-software-realm/types"
 
 type Register1 struct{}
 

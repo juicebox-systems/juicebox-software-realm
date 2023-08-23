@@ -1,4 +1,4 @@
-module github.com/juicebox-software-realm
+module github.com/juicebox-systems/juicebox-software-realm
 
 go 1.20
 

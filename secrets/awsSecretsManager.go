@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 

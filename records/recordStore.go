@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/juicebox-software-realm/otel"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 )
 

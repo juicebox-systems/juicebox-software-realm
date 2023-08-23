@@ -1,7 +1,7 @@
 package requests
 
 import (
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 )
 
 type Register1 struct{}

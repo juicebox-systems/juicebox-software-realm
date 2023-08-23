@@ -3,7 +3,7 @@ package requests
 import (
 	"testing"
 
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"github.com/stretchr/testify/assert"
 )
 

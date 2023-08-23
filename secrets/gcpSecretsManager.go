@@ -7,7 +7,7 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"github.com/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"go.opentelemetry.io/otel/codes"
 )
 

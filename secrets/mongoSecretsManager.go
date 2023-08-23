@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/juicebox-software-realm/otel"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

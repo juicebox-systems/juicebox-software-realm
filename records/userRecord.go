@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"golang.org/x/crypto/blake2s"
 )
 

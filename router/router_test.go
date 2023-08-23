@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/juicebox-software-realm/records"
-	"github.com/juicebox-software-realm/requests"
-	"github.com/juicebox-software-realm/responses"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/records"
+	"github.com/juicebox-systems/juicebox-software-realm/requests"
+	"github.com/juicebox-systems/juicebox-software-realm/responses"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )

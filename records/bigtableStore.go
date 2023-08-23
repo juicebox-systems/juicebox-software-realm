@@ -10,8 +10,8 @@ import (
 
 	"cloud.google.com/go/bigtable"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/juicebox-software-realm/otel"
-	"github.com/juicebox-software-realm/types"
+	"github.com/juicebox-systems/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
