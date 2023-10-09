@@ -56,7 +56,7 @@ func TestUserRecordID(t *testing.T) {
 	}
 	c.Set("user", token)
 	userRecordID, verifiedClaims, err = UserRecordID(c, realmID)
-	assert.EqualError(t, err, "jwt claims 'scope' missing user scope")
+	assert.EqualError(t, err, "jwt claims 'scope' should be 'user'")
 	assert.Nil(t, userRecordID)
 	assert.Nil(t, verifiedClaims)
 }
@@ -253,7 +253,7 @@ func TestVerifyToken(t *testing.T) {
 	}
 	c.Set("user", token)
 	verifiedClaims, err = verifyToken(c, realmID, requireScope, scopeAudit)
-	assert.EqualError(t, err, "jwt claims 'scope' missing audit scope")
+	assert.EqualError(t, err, "jwt claims 'scope' should be 'audit'")
 	assert.Nil(t, verifiedClaims)
 
 	// Test explicit scope doesn't match optional scope
@@ -270,7 +270,7 @@ func TestVerifyToken(t *testing.T) {
 	}
 	c.Set("user", token)
 	verifiedClaims, err = verifyToken(c, realmID, allowMissingScope, scopeAudit)
-	assert.EqualError(t, err, "jwt claims 'scope' missing audit scope")
+	assert.EqualError(t, err, "jwt claims 'scope' should be 'audit'")
 	assert.Nil(t, verifiedClaims)
 
 	// Test scope is empty but required
@@ -300,7 +300,7 @@ func TestVerifyToken(t *testing.T) {
 	}
 	c.Set("user", token)
 	verifiedClaims, err = verifyToken(c, realmID, allowMissingScope, scopeAudit)
-	assert.EqualError(t, err, "jwt claims 'scope' missing audit scope")
+	assert.EqualError(t, err, "jwt claims 'scope' should be 'audit'")
 	assert.Nil(t, verifiedClaims)
 
 	// Test scope is empty, but not required.

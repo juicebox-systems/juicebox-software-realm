@@ -52,7 +52,7 @@ func verifyToken(c echo.Context, realmID types.RealmID, scopeRequired bool, scop
 				return nil, errors.New("jwt claims missing 'scope' field")
 			}
 		} else {
-			return nil, fmt.Errorf("jwt claims 'scope' missing %s scope", scope)
+			return nil, fmt.Errorf("jwt claims 'scope' should be '%s'", scope)
 		}
 	}
 	return claims, nil
