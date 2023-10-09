@@ -14,6 +14,9 @@ import (
 type PubSub interface {
 	Ack(ctx context.Context, realm types.RealmID, tenant string, ids []string) error
 	Publish(ctx context.Context, realm types.RealmID, tenant string, event EventMessage) error
+	// If there are no pending messages, implementations of Pull may choose to
+	// wait a reasonable (~30 seconds) amount of time to see if a new message
+	// turns up.
 	Pull(ctx context.Context, realm types.RealmID, tenant string, maxRows uint16) ([]responses.TenantLogEntry, error)
 }
 
