@@ -7,19 +7,19 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	ddbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type DynamoDbRecordStore struct {
-	svc       *dynamodb.DynamoDB
+	svc       *dynamodb.Client
 	tableName string
 }
 
@@ -39,22 +39,15 @@ func NewDynamoDbRecordStore(ctx context.Context, realmID types.RealmID) (*Dynamo
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
 		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
-	session, err := session.NewSession(&aws.Config{
-		Region: &region,
-	})
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
-	svc := dynamodb.New(session)
-
+	svc := dynamodb.NewFromConfig(cfg)
 	tableName := types.JuiceboxRealmDatabasePrefix + realmID.String()
 
 	return &DynamoDbRecordStore{
@@ -76,18 +69,16 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(db.tableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			primaryKeyName: {
-				S: aws.String(string(recordID)),
+		Key: map[string]ddbTypes.AttributeValue{
+			primaryKeyName: &ddbTypes.AttributeValueMemberS{
+				Value: string(recordID),
 			},
 		},
 	}
 
-	result, err := db.svc.GetItemWithContext(ctx, input)
+	result, err := db.svc.GetItem(ctx, input)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, nil, err
+		return userRecord, nil, otel.RecordOutcome(err, span)
 	}
 
 	if len(result.Item) == 0 {
@@ -98,18 +89,14 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 	attributeValue, ok := result.Item[userRecordAttributeName]
 	if !ok {
 		err := errors.New("failed to read attribute")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, nil, err
+		return userRecord, nil, otel.RecordOutcome(err, span)
 	}
 
-	serializedUserRecord := attributeValue.B
+	serializedUserRecord := attributeValue.(*ddbTypes.AttributeValueMemberB).Value
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, result.Item, err
+		return userRecord, result.Item, otel.RecordOutcome(err, span)
 	}
 
 	return userRecord, result.Item, nil
@@ -126,9 +113,7 @@ func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
 
 	var newVersion uint64
@@ -137,34 +122,27 @@ func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 	// If we read an existing record from the db, try and identify a version for it.
 	// We'll use this version to ensure no-one has mutated this row since we read it.
 	if readRecord != nil {
-		readRecord, ok := readRecord.(map[string]*dynamodb.AttributeValue)
+		readRecord, ok := readRecord.(map[string]ddbTypes.AttributeValue)
 		if !ok {
-			err := errors.New("unexepected type for read record")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			err := errors.New("unexpected type for read record")
+			return otel.RecordOutcome(err, span)
 		}
 
 		versionAttribute, ok := readRecord[versionAttributeName]
 		if !ok {
 			err := errors.New("read record unexpectedly missing version attribute")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
-		if versionAttribute.N == nil {
+		versionValue, ok := versionAttribute.(*ddbTypes.AttributeValueMemberN)
+		if !ok {
 			err := errors.New("read record version attribute is unexpected type")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
-		v, err := strconv.ParseUint(*versionAttribute.N, 10, 64)
+		v, err := strconv.ParseUint(versionValue.Value, 10, 64)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		newVersion = v + 1
@@ -172,43 +150,37 @@ func (db DynamoDbRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 	}
 
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String(db.tableName),
-		Item: map[string]*dynamodb.AttributeValue{
-			primaryKeyName: {
-				S: aws.String(string(recordID)),
+		TableName: &db.tableName,
+		Item: map[string]ddbTypes.AttributeValue{
+			primaryKeyName: &ddbTypes.AttributeValueMemberS{
+				Value: string(recordID),
 			},
-			userRecordAttributeName: {
-				B: serializedUserRecord,
+			userRecordAttributeName: &ddbTypes.AttributeValueMemberB{
+				Value: serializedUserRecord,
 			},
-			versionAttributeName: {
-				N: aws.String(fmt.Sprint(newVersion)),
+			versionAttributeName: &ddbTypes.AttributeValueMemberN{
+				Value: fmt.Sprint(newVersion),
 			},
 		},
 	}
 
 	if previousVersion == nil {
 		input.ConditionExpression = aws.String("attribute_not_exists(#primaryKey)")
-		input.ExpressionAttributeNames = map[string]*string{
-			"#primaryKey": aws.String(primaryKeyName),
+		input.ExpressionAttributeNames = map[string]string{
+			"#primaryKey": primaryKeyName,
 		}
 	} else {
 		input.ConditionExpression = aws.String("#version = :previousVersion")
-		input.ExpressionAttributeNames = map[string]*string{
-			"#version": aws.String(versionAttributeName),
+		input.ExpressionAttributeNames = map[string]string{
+			"#version": versionAttributeName,
 		}
-		input.ExpressionAttributeValues = map[string]*dynamodb.AttributeValue{
-			":previousVersion": {
-				N: aws.String(fmt.Sprint(*previousVersion)),
+		input.ExpressionAttributeValues = map[string]ddbTypes.AttributeValue{
+			":previousVersion": &ddbTypes.AttributeValueMemberN{
+				Value: fmt.Sprint(*previousVersion),
 			},
 		}
 	}
 
-	_, err = db.svc.PutItemWithContext(ctx, input)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-
-	return nil
+	_, err = db.svc.PutItem(ctx, input)
+	return otel.RecordOutcome(err, span)
 }
