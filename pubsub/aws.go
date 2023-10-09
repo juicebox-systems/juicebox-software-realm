@@ -38,12 +38,12 @@ func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
 		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		return nil, msgType, recordOutcome(err, span)
+		return nil, msgType, otel.RecordOutcome(err, span)
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		return nil, msgType, recordOutcome(err, span)
+		return nil, msgType, otel.RecordOutcome(err, span)
 	}
 	client := sqs.NewFromConfig(cfg)
 	return &sqsClient{client: client}, msgType, nil

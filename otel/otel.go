@@ -8,6 +8,7 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -24,6 +25,16 @@ var tracerName = "jb-sw-realm"
 
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	return otel.Tracer(tracerName).Start(ctx, name, opts...)
+}
+
+func RecordOutcome(err error, span trace.Span) error {
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	} else {
+		span.SetStatus(codes.Ok, "")
+	}
+	return err
 }
 
 func IncrementInt64Counter(ctx context.Context, name string, attributes ...attribute.KeyValue) error {

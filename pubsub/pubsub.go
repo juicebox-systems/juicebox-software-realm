@@ -8,7 +8,6 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,7 +37,7 @@ func NewPubSub(ctx context.Context, provider types.ProviderName, realmID types.R
 		err = fmt.Errorf("unexpected provider %v", provider)
 	}
 	if err != nil {
-		return nil, recordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
 	return &spannedPubSub{inner: ps, msgType: msgType}, nil
 }
@@ -60,7 +59,7 @@ func (s *spannedPubSub) Ack(ctx context.Context, realm types.RealmID, tenant str
 	defer span.End()
 
 	err := s.inner.Ack(ctx, realm, tenant, ids)
-	return recordOutcome(err, span)
+	return otel.RecordOutcome(err, span)
 }
 
 func (s *spannedPubSub) Publish(ctx context.Context, realm types.RealmID, tenant string, event EventMessage) error {
@@ -68,7 +67,7 @@ func (s *spannedPubSub) Publish(ctx context.Context, realm types.RealmID, tenant
 	defer span.End()
 
 	err := s.inner.Publish(ctx, realm, tenant, event)
-	return recordOutcome(err, span)
+	return otel.RecordOutcome(err, span)
 }
 
 func (s *spannedPubSub) Pull(ctx context.Context, realm types.RealmID, tenant string, maxRows uint16) ([]responses.TenantLogEntry, error) {
@@ -76,7 +75,7 @@ func (s *spannedPubSub) Pull(ctx context.Context, realm types.RealmID, tenant st
 	defer span.End()
 
 	events, err := s.inner.Pull(ctx, realm, tenant, maxRows)
-	return events, recordOutcome(err, span)
+	return events, otel.RecordOutcome(err, span)
 }
 
 func (s *spannedPubSub) startSpan(ctx context.Context, name string) (context.Context, trace.Span) {
@@ -87,14 +86,4 @@ func (s *spannedPubSub) startSpan(ctx context.Context, name string) (context.Con
 		trace.WithAttributes(s.msgType),
 	)
 	return ctx, span
-}
-
-func recordOutcome(err error, span trace.Span) error {
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-	} else {
-		span.SetStatus(codes.Ok, "")
-	}
-	return err
 }

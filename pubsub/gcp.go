@@ -39,15 +39,15 @@ func newGcpPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 
 	projectID := os.Getenv("GCP_PROJECT_ID")
 	if projectID == "" {
-		return nil, msgType, recordOutcome(errors.New("unexpectedly missing GCP_PROJECT_ID"), span)
+		return nil, msgType, otel.RecordOutcome(errors.New("unexpectedly missing GCP_PROJECT_ID"), span)
 	}
 	subClient, err := gcp_pubsub.NewSubscriberClient(ctx)
 	if err != nil {
-		return nil, msgType, recordOutcome(err, span)
+		return nil, msgType, otel.RecordOutcome(err, span)
 	}
 	pubClient, err := gcp_pubsub.NewPublisherClient(ctx)
 	if err != nil {
-		return nil, msgType, recordOutcome(err, span)
+		return nil, msgType, otel.RecordOutcome(err, span)
 	}
 	return &gcpPubSub{
 		project:   projectID,
@@ -141,7 +141,7 @@ func (c *gcpPubSub) createTopicAndSub(ctx context.Context, realm types.RealmID, 
 		Labels: labels,
 	})
 	if err != nil && !errorHasCode(err, codes.AlreadyExists) {
-		return recordOutcome(err, span)
+		return otel.RecordOutcome(err, span)
 	}
 
 	_, err = c.subClient.CreateSubscription(ctx, &pubsubpb.Subscription{
@@ -166,7 +166,7 @@ func (c *gcpPubSub) createTopicAndSub(ctx context.Context, realm types.RealmID, 
 	if errorHasCode(err, codes.AlreadyExists) {
 		err = nil
 	}
-	return recordOutcome(err, span)
+	return otel.RecordOutcome(err, span)
 }
 
 func errorHasCode(err error, code codes.Code) bool {
