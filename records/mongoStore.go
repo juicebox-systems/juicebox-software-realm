@@ -13,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -39,16 +38,12 @@ func NewMongoRecordStore(ctx context.Context, realmID types.RealmID) (*MongoReco
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
 		err := errors.New("unexpectedly missing MONGO_URL")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	url, err := url.Parse(urlString)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	databaseName := types.JuiceboxRealmDatabasePrefix + realmID.String()
@@ -62,18 +57,14 @@ func NewMongoRecordStore(ctx context.Context, realmID types.RealmID) (*MongoReco
 	clientOptions := options.Client().ApplyURI(urlString)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	err = client.Database(databaseName).CreateCollection(ctx, userRecordsCollection)
 	if err != nil {
 		// ignore the "NamespaceExists" error code
 		if mErr, ok := err.(mongo.CommandError); !ok || !mErr.HasErrorCode(48) {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
+			return nil, otel.RecordOutcome(err, span)
 		}
 	}
 
@@ -107,34 +98,26 @@ func (m MongoRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) 
 			// no stored record yet
 			return userRecord, nil, nil
 		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, nil, err
+		return userRecord, nil, otel.RecordOutcome(err, span)
 	}
 
 	record, ok := result[serializedUserRecordKey]
 	if !ok {
 		err := errors.New("result unexpectedly missing 'serializedUserRecord' key")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, result, err
+		return userRecord, result, otel.RecordOutcome(err, span)
 	}
 
 	primitiveBinaryRecord, ok := record.(primitive.Binary)
 	if !ok {
 		err := errors.New("user record was of wrong type")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, result, err
+		return userRecord, result, otel.RecordOutcome(err, span)
 	}
 
 	serializedUserRecord := primitiveBinaryRecord.Data
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, result, err
+		return userRecord, result, otel.RecordOutcome(err, span)
 	}
 
 	return userRecord, result, nil
@@ -154,9 +137,7 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
 
 	// mongo doesn't support unsigned integers, but it supports 64-bit signed
@@ -170,25 +151,19 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 		readRecord, ok := readRecord.(primitive.M)
 		if !ok {
 			err := errors.New("unexepected type for read record")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		record, ok := readRecord[versionKey]
 		if !ok {
 			err := errors.New("read record unexpectedly missing version attribute")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		v, ok := record.(int64)
 		if !ok {
 			err := errors.New("read record version key was of wrong type")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		newVersion = v + 1
@@ -215,10 +190,7 @@ func (m MongoRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID
 	)
 
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
-
 	return nil
 }

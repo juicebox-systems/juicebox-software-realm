@@ -8,7 +8,6 @@ import (
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
-	"go.opentelemetry.io/otel/codes"
 )
 
 type GcpSecretsManager struct {
@@ -23,16 +22,12 @@ func NewGcpSecretsManager(ctx context.Context) (*GcpSecretsManager, error) {
 	projectID := os.Getenv("GCP_PROJECT_ID")
 	if projectID == "" {
 		err := fmt.Errorf("unexpectedly missing GCP_PROJECT_ID")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	return &GcpSecretsManager{
@@ -54,9 +49,7 @@ func (sm GcpSecretsManager) GetSecret(ctx context.Context, name string, version 
 	})
 
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	return result.Payload.Data, nil

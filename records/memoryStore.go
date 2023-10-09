@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -46,7 +45,5 @@ func (m MemoryRecordStore) WriteRecord(ctx context.Context, recordID UserRecordI
 	}
 
 	err := errors.New("record was unexpectedly mutated before write")
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	return err
+	return otel.RecordOutcome(err, span)
 }

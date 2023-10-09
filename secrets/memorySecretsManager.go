@@ -10,7 +10,6 @@ import (
 
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 )
 
 type MemorySecretsManager struct {
@@ -28,17 +27,13 @@ func NewMemorySecretsManagerWithPrefix(ctx context.Context, secretPrefix string)
 	secretsJSON := os.Getenv("TENANT_SECRETS")
 	if secretsJSON == "" {
 		err := errors.New("unexpectedly missing TENANT_SECRETS")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	var unmarshaledSecrets map[string]map[uint64]string
 	err := json.Unmarshal([]byte(secretsJSON), &unmarshaledSecrets)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	secrets := make(map[string]map[uint64][]byte)
@@ -48,9 +43,7 @@ func NewMemorySecretsManagerWithPrefix(ctx context.Context, secretPrefix string)
 	for tenantName, versionAndSecrets := range unmarshaledSecrets {
 		if match := regex.MatchString(tenantName); !match {
 			err := errors.New("tenant names must be alphanumeric")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
+			return nil, otel.RecordOutcome(err, span)
 		}
 		prefixedTenantName := secretPrefix + tenantName
 		for version, secret := range versionAndSecrets {
@@ -75,16 +68,12 @@ func (sm MemorySecretsManager) GetSecret(ctx context.Context, name string, versi
 	secretVersions, ok := sm.secrets[name]
 	if !ok {
 		err := fmt.Errorf("failed to get secret versions %s", name)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 	secret, ok := secretVersions[version]
 	if !ok {
 		err := fmt.Errorf("failed to get secret %s with version %d", name, version)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 	return secret, nil
 }

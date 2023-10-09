@@ -11,7 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 )
 
 // SecretsManager represents a generic interface into the
@@ -87,7 +86,5 @@ func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID
 	}
 
 	err := fmt.Errorf("unexpected provider %v", provider)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	return nil, err
+	return nil, otel.RecordOutcome(err, span)
 }
