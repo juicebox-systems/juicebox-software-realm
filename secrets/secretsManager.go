@@ -21,12 +21,16 @@ type SecretsManager interface {
 }
 
 func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) ([]byte, error) {
+	return GetJWTSigningKeyWithPrefix(ctx, sm, types.JuiceboxTenantSecretPrefix, token)
+}
+
+func GetJWTSigningKeyWithPrefix(ctx context.Context, sm SecretsManager, prefix string, token *jwt.Token) ([]byte, error) {
 	name, version, err := ParseKid(token)
 	if err != nil {
 		return nil, err
 	}
 
-	tenantSecretKey := types.JuiceboxTenantSecretPrefix + *name
+	tenantSecretKey := prefix + *name
 
 	key, err := sm.GetSecret(ctx, tenantSecretKey, *version)
 	if err != nil {

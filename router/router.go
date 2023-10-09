@@ -3,6 +3,8 @@ package router
 import (
 	"context"
 	cryptoRand "crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +17,7 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/oprf"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/providers"
+	"github.com/juicebox-systems/juicebox-software-realm/pubsub"
 	"github.com/juicebox-systems/juicebox-software-realm/records"
 	"github.com/juicebox-systems/juicebox-software-realm/requests"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
@@ -40,7 +43,6 @@ func RunRouter(
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.BodyLimit("2K"))
 	e.Use(middleware.CORS())
 	e.Use(otelecho.Middleware("echo-router"))
 
@@ -55,7 +57,7 @@ func RunRouter(
 			return contextAwareError(c, http.StatusUpgradeRequired, "SDK upgrade required")
 		}
 
-		userRecordID, tenantID, err := userRecordID(c, realmID)
+		userRecordID, claims, err := userRecordID(c, realmID)
 		if err != nil {
 			return contextAwareError(c, http.StatusUnauthorized, "Error reading user from jwt")
 		}
@@ -76,19 +78,24 @@ func RunRouter(
 			return contextAwareError(c, http.StatusInternalServerError, "Error reading from record store")
 		}
 
-		response, updatedUserRecord, err := handleRequest(c, *tenantID, userRecord, request, cryptoRand.Reader)
+		result, err := handleRequest(c, claims, userRecord, request, cryptoRand.Reader)
 		if err != nil {
 			return contextAwareError(c, http.StatusBadRequest, "Error processing request")
 		}
 
-		if updatedUserRecord != nil {
-			err := provider.RecordStore.WriteRecord(c.Request().Context(), *userRecordID, *updatedUserRecord, readRecord)
+		if result.updatedRecord != nil {
+			err := provider.RecordStore.WriteRecord(c.Request().Context(), *userRecordID, *result.updatedRecord, readRecord)
 			if err != nil {
 				return contextAwareError(c, http.StatusInternalServerError, "Error writing to record store")
 			}
 		}
-
-		serializedResponse, err := cbor.Marshal(response)
+		if result.event != nil {
+			err := provider.PubSub.Publish(c.Request().Context(), realmID, claims.Issuer, *result.event)
+			if err != nil {
+				return contextAwareError(c, http.StatusInternalServerError, "Error writing to pub/sub queue")
+			}
+		}
+		serializedResponse, err := cbor.Marshal(&result.response)
 		if err != nil {
 			return contextAwareError(c, http.StatusInternalServerError, "Error marshalling response payload")
 		}
@@ -96,77 +103,57 @@ func RunRouter(
 		otel.IncrementInt64Counter(
 			c.Request().Context(),
 			"realm.request.count",
-			attribute.String("tenant", *tenantID),
+			attribute.String("tenant", claims.Issuer),
 			attribute.String("type", reflect.TypeOf(request.Payload).Name()),
 		)
 
 		c.Response().Header().Set(echo.HeaderContentType, echo.MIMEOctetStream)
 		return c.Blob(http.StatusOK, echo.MIMEOctetStream, serializedResponse)
-	}, echojwt.WithConfig(echojwt.Config{
+
+	}, middleware.BodyLimit("2K"), echojwt.WithConfig(echojwt.Config{
 		KeyFunc: func(t *jwt.Token) (interface{}, error) {
 			return secrets.GetJWTSigningKey(context.TODO(), provider.SecretsManager, t)
 		},
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return &jwt.RegisteredClaims{}
+			return &claims{}
 		},
 	}))
+
+	AddTenantLogHandlers(e, realmID, provider.PubSub, provider.SecretsManager, types.JuiceboxTenantSecretPrefix)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
-func userRecordID(c echo.Context, realmID types.RealmID) (*records.UserRecordID, *string, error) {
-	token, ok := c.Get("user").(*jwt.Token)
-	if !ok {
-		return nil, nil, errors.New("user is not a jwt token")
-	}
-
-	claims, ok := token.Claims.(*jwt.RegisteredClaims)
-	if !ok {
-		return nil, nil, errors.New("jwt claims of unexpected type")
-	}
-
-	if len(claims.Audience) != 1 || claims.Audience[0] != realmID.String() {
-		return nil, nil, errors.New("jwt claims contains invalid 'aud' field")
-	}
-
-	if claims.Subject == "" {
-		return nil, nil, errors.New("jwt claims missing 'sub' field")
-	}
-	userID := claims.Subject
-
-	if claims.Issuer == "" {
-		return nil, nil, errors.New("jwt claims missing 'iss' field")
-	}
-	tenantName := claims.Issuer
-
-	signingTenantName, _, err := secrets.ParseKid(token)
+func userRecordID(c echo.Context, realmID types.RealmID) (*records.UserRecordID, *claims, error) {
+	claims, err := verifyToken(c, realmID, allowMissingScope, scopeUser)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if *signingTenantName != tenantName {
-		return nil, nil, errors.New("jwt 'iss' field does not match signer")
-	}
-
-	userRecordID, err := records.CreateUserRecordID(tenantName, userID)
+	userRecordID, err := records.CreateUserRecordID(claims.Issuer, claims.Subject)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	return &userRecordID, &tenantName, nil
+	return &userRecordID, claims, nil
 }
 
-func handleRequest(c echo.Context, tenantID string, record records.UserRecord, request requests.SecretsRequest, cryptoRng io.Reader) (*responses.SecretsResponse, *records.UserRecord, error) {
+type appResult struct {
+	response      responses.SecretsResponse
+	updatedRecord *records.UserRecord
+	event         *pubsub.EventMessage
+}
+
+func handleRequest(c echo.Context, claims *claims, record records.UserRecord, request requests.SecretsRequest, cryptoRng io.Reader) (*appResult, error) {
 	_, span := otel.StartSpan(c.Request().Context(), reflect.TypeOf(request.Payload).Name())
 	defer span.End()
-	span.SetAttributes(attribute.String("tenant", tenantID))
+	span.SetAttributes(attribute.String("tenant", claims.Issuer))
 
 	switch payload := request.Payload.(type) {
 	case requests.Register1:
-		return &responses.SecretsResponse{
-			Status:  responses.Ok,
-			Payload: responses.Register1{},
-		}, nil, nil
+		return &appResult{
+			response: responses.SecretsResponse{
+				Status:  responses.Ok,
+				Payload: responses.Register1{},
+			}}, nil
 	case requests.Register2:
 		record.RegistrationState = records.Registered{
 			Version:                   payload.Version,
@@ -180,54 +167,70 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			GuessCount:                0,
 			Policy:                    payload.Policy,
 		}
-		return &responses.SecretsResponse{
-			Status:  responses.Ok,
-			Payload: responses.Register2{},
-		}, &record, nil
+		return &appResult{
+			response: responses.SecretsResponse{
+				Status:  responses.Ok,
+				Payload: responses.Register2{},
+			},
+			updatedRecord: &record,
+			event: &pubsub.EventMessage{
+				User:  eventUserID(claims),
+				Event: "registered",
+			}}, nil
 	case requests.Recover1:
 		switch state := record.RegistrationState.(type) {
 		case records.Registered:
 			if state.GuessCount >= uint16(state.Policy.NumGuesses) {
 				record.RegistrationState = records.NoGuesses{}
-				return &responses.SecretsResponse{
-					Status:  responses.NoGuesses,
-					Payload: responses.Recover1{},
-				}, &record, nil
+				return &appResult{
+					response: responses.SecretsResponse{
+						Status:  responses.NoGuesses,
+						Payload: responses.Recover1{},
+					},
+					updatedRecord: &record,
+				}, nil
 			}
 
-			return &responses.SecretsResponse{
-				Status: responses.Ok,
-				Payload: responses.Recover1{
-					Version: state.Version,
-				},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status: responses.Ok,
+					Payload: responses.Recover1{
+						Version: state.Version,
+					},
+				}}, nil
 		case records.NoGuesses:
-			return &responses.SecretsResponse{
-				Status:  responses.NoGuesses,
-				Payload: responses.Recover1{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NoGuesses,
+					Payload: responses.Recover1{},
+				}}, nil
 		case records.NotRegistered:
-			return &responses.SecretsResponse{
-				Status:  responses.NotRegistered,
-				Payload: responses.Recover1{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NotRegistered,
+					Payload: responses.Recover1{},
+				}}, nil
 		}
 	case requests.Recover2:
 		switch state := record.RegistrationState.(type) {
 		case records.Registered:
 			if state.Version != payload.Version {
-				return &responses.SecretsResponse{
-					Status:  responses.VersionMismatch,
-					Payload: responses.Recover2{},
-				}, nil, nil
+				return &appResult{
+					response: responses.SecretsResponse{
+						Status:  responses.VersionMismatch,
+						Payload: responses.Recover2{},
+					}}, nil
 			}
 
 			if state.GuessCount >= uint16(state.Policy.NumGuesses) {
 				record.RegistrationState = records.NoGuesses{}
-				return &responses.SecretsResponse{
-					Status:  responses.NoGuesses,
-					Payload: responses.Recover2{},
-				}, &record, nil
+				return &appResult{
+					response: responses.SecretsResponse{
+						Status:  responses.NoGuesses,
+						Payload: responses.Recover2{},
+					},
+					updatedRecord: &record,
+				}, nil
 			}
 
 			state.GuessCount++
@@ -242,39 +245,50 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
-				return nil, &record, err
+				return nil, err
 			}
 
-			return &responses.SecretsResponse{
-				Status: responses.Ok,
-				Payload: responses.Recover2{
-					OprfSignedPublicKey: state.OprfSignedPublicKey,
-					OprfBlindedResult:   *oprfBlindedResult,
-					OprfProof:           *oprfProof,
-					UnlockKeyCommitment: state.UnlockKeyCommitment,
-					NumGuesses:          state.Policy.NumGuesses,
-					GuessCount:          state.GuessCount,
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status: responses.Ok,
+					Payload: responses.Recover2{
+						OprfSignedPublicKey: state.OprfSignedPublicKey,
+						OprfBlindedResult:   *oprfBlindedResult,
+						OprfProof:           *oprfProof,
+						UnlockKeyCommitment: state.UnlockKeyCommitment,
+						NumGuesses:          state.Policy.NumGuesses,
+						GuessCount:          state.GuessCount,
+					},
 				},
-			}, &record, nil
+				updatedRecord: &record,
+				event: &pubsub.EventMessage{
+					User:       eventUserID(claims),
+					Event:      "guess_used",
+					NumGuesses: &state.Policy.NumGuesses,
+					GuessCount: &state.GuessCount,
+				}}, nil
 		case records.NoGuesses:
-			return &responses.SecretsResponse{
-				Status:  responses.NoGuesses,
-				Payload: responses.Recover2{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NoGuesses,
+					Payload: responses.Recover2{},
+				}}, nil
 		case records.NotRegistered:
-			return &responses.SecretsResponse{
-				Status:  responses.NotRegistered,
-				Payload: responses.Recover2{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NotRegistered,
+					Payload: responses.Recover2{},
+				}}, nil
 		}
 	case requests.Recover3:
 		switch state := record.RegistrationState.(type) {
 		case records.Registered:
 			if state.Version != payload.Version {
-				return &responses.SecretsResponse{
-					Status:  responses.VersionMismatch,
-					Payload: responses.Recover3{},
-				}, nil, nil
+				return &appResult{
+					response: responses.SecretsResponse{
+						Status:  responses.VersionMismatch,
+						Payload: responses.Recover3{},
+					}}, nil
 			}
 
 			guessesRemaining := state.Policy.NumGuesses - state.GuessCount
@@ -284,45 +298,72 @@ func handleRequest(c echo.Context, tenantID string, record records.UserRecord, r
 					record.RegistrationState = records.NoGuesses{}
 				}
 
-				return &responses.SecretsResponse{
-					Status: responses.BadUnlockKeyTag,
-					Payload: responses.Recover3{
-						GuessesRemaining: &guessesRemaining,
+				return &appResult{
+					response: responses.SecretsResponse{
+						Status: responses.BadUnlockKeyTag,
+						Payload: responses.Recover3{
+							GuessesRemaining: &guessesRemaining,
+						},
 					},
-				}, &record, nil
+					updatedRecord: &record,
+				}, nil
 			}
 
 			state.GuessCount = 0
 			record.RegistrationState = state
 
-			return &responses.SecretsResponse{
-				Status: responses.Ok,
-				Payload: responses.Recover3{
-					EncryptionKeyScalarShare:  &state.EncryptionKeyScalarShare,
-					EncryptedSecret:           &state.EncryptedSecret,
-					EncryptedSecretCommitment: &state.EncryptedSecretCommitment,
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status: responses.Ok,
+					Payload: responses.Recover3{
+						EncryptionKeyScalarShare:  &state.EncryptionKeyScalarShare,
+						EncryptedSecret:           &state.EncryptedSecret,
+						EncryptedSecretCommitment: &state.EncryptedSecretCommitment,
+					},
 				},
-			}, &record, nil
+				updatedRecord: &record,
+				event: &pubsub.EventMessage{
+					User:  eventUserID(claims),
+					Event: "share_recovered",
+				}}, nil
 		case records.NoGuesses:
-			return &responses.SecretsResponse{
-				Status:  responses.NoGuesses,
-				Payload: responses.Recover3{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NoGuesses,
+					Payload: responses.Recover3{},
+				}}, nil
 		case records.NotRegistered:
-			return &responses.SecretsResponse{
-				Status:  responses.NotRegistered,
-				Payload: responses.Recover3{},
-			}, nil, nil
+			return &appResult{
+				response: responses.SecretsResponse{
+					Status:  responses.NotRegistered,
+					Payload: responses.Recover3{},
+				}}, nil
 		}
 	case requests.Delete:
 		record.RegistrationState = records.NotRegistered{}
-		return &responses.SecretsResponse{
-			Status:  responses.Ok,
-			Payload: responses.Delete{},
-		}, &record, nil
+		return &appResult{
+			response: responses.SecretsResponse{
+				Status:  responses.Ok,
+				Payload: responses.Delete{},
+			},
+			updatedRecord: &record,
+			event: &pubsub.EventMessage{
+				User:  eventUserID(claims),
+				Event: "deleted",
+			},
+		}, nil
 	}
 
-	return nil, nil, errors.New("unexpected request type")
+	return nil, errors.New("unexpected request type")
+}
+
+// Builds the hashed tenant & userID string that is included in the tenant event log entries.
+func eventUserID(c *claims) string {
+	h := sha256.New()
+	h.Write([]byte(c.Issuer))
+	h.Write([]byte{':'})
+	h.Write([]byte(c.Subject))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func contextAwareError(c echo.Context, code int, str string) error {

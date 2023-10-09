@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
+	"github.com/juicebox-systems/juicebox-software-realm/pubsub"
 	"github.com/juicebox-systems/juicebox-software-realm/records"
 	"github.com/juicebox-systems/juicebox-software-realm/secrets"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
@@ -18,6 +19,7 @@ type Provider struct {
 	Name           types.ProviderName
 	RecordStore    records.RecordStore
 	SecretsManager secrets.SecretsManager
+	PubSub         pubsub.PubSub
 }
 
 func Parse(nameString string) (types.ProviderName, error) {
@@ -63,11 +65,22 @@ func NewProvider(ctx context.Context, name types.ProviderName, realmID types.Rea
 		return nil, err
 	}
 
-	fmt.Print("\rEstablished connection to record store.\n\n")
+	fmt.Print("\rEstablished connection to record store.\n")
+
+	fmt.Print("Connecting to pub/sub...")
+	pubsub, err := pubsub.NewPubSub(ctx, name, realmID)
+	if err != nil {
+		fmt.Printf("\rFailed to connect to pubsub system: %s.\n", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+	fmt.Print("\rEstablished connection to pub/sub system.\n\n")
 
 	return &Provider{
 		Name:           name,
 		RecordStore:    recordStore,
 		SecretsManager: secretsManager,
+		PubSub:         pubsub,
 	}, nil
 }

@@ -18,6 +18,10 @@ type MemorySecretsManager struct {
 }
 
 func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error) {
+	return NewMemorySecretsManagerWithPrefix(ctx, types.JuiceboxTenantSecretPrefix)
+}
+
+func NewMemorySecretsManagerWithPrefix(ctx context.Context, secretPrefix string) (*MemorySecretsManager, error) {
 	_, span := otel.StartSpan(ctx, "NewMemorySecretsManager")
 	defer span.End()
 
@@ -48,7 +52,7 @@ func NewMemorySecretsManager(ctx context.Context) (*MemorySecretsManager, error)
 			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
-		prefixedTenantName := types.JuiceboxTenantSecretPrefix + tenantName
+		prefixedTenantName := secretPrefix + tenantName
 		for version, secret := range versionAndSecrets {
 			m, ok := secrets[prefixedTenantName]
 			if !ok {

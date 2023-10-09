@@ -3,6 +3,9 @@ package types
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
+
+	"github.com/labstack/echo/v4"
 )
 
 type ProviderName int
@@ -54,4 +57,47 @@ type Policy struct {
 
 func (x UnlockKeyTag) ConstantTimeCompare(y UnlockKeyTag) int {
 	return subtle.ConstantTimeCompare(x[:], y[:])
+}
+
+type HTTPError struct {
+	Err  error
+	Code int
+}
+
+func NewHTTPError(code int, e error) *HTTPError {
+	if e == nil {
+		return nil
+	}
+	if he, ok := e.(*HTTPError); ok {
+		return he
+	}
+	// The caller may of wrapped a HttpError to add additional context to the
+	// message. Ensure we preserve the wrapped status code.
+	var wrapped *HTTPError
+	if errors.As(e, &wrapped) {
+		code = wrapped.Code
+	}
+	return &HTTPError{
+		Err:  e,
+		Code: code,
+	}
+}
+
+func (e *HTTPError) Error() string {
+	return e.Err.Error()
+}
+
+func (e *HTTPError) StatusCode() int {
+	return e.Code
+}
+
+func (e *HTTPError) Unwrap() error {
+	return e.Err
+}
+
+func (e *HTTPError) ToEcho() *echo.HTTPError {
+	// We can't use Echo's HTTPError everywhere because it adds code=blah into
+	// the Error() output which makes wrapping it for additional context
+	// problematic.
+	return echo.NewHTTPError(e.Code, e.Err)
 }

@@ -20,12 +20,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var tracerName = "jb-sw-realm"
+
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return otel.Tracer("jb-sw-realm").Start(ctx, name, opts...)
+	return otel.Tracer(tracerName).Start(ctx, name, opts...)
 }
 
 func IncrementInt64Counter(ctx context.Context, name string, attributes ...attribute.KeyValue) error {
-	counter, err := otel.Meter("jb-sw-realm").Int64Counter(name)
+	counter, err := otel.Meter(tracerName).Int64Counter(name)
 	if err != nil {
 		return err
 	}
@@ -38,7 +40,7 @@ func initResource(realmID types.RealmID) *resource.Resource {
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("jb-sw-realm"),
+			semconv.ServiceName(tracerName),
 			attribute.String("realm", realmID.String()),
 		),
 	)
@@ -48,9 +50,10 @@ func initResource(realmID types.RealmID) *resource.Resource {
 	return resource
 }
 
-func InitTraceProvider(ctx context.Context, realmID types.RealmID) *sdktrace.TracerProvider {
-	resource := initResource(realmID)
+func InitTraceProvider(ctx context.Context, serviceName string, realmID types.RealmID) *sdktrace.TracerProvider {
+	tracerName = serviceName
 
+	resource := initResource(realmID)
 	opts := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(resource),

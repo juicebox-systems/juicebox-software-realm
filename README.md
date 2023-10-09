@@ -15,7 +15,7 @@ Usage of jb-sw-realm:
   -port int
     	The port to run the server on. (default 8080)
   -provider string
-    	The provider to use. [gcs|aws|mongo|memory] (default "memory")
+        The provider to use. [gcp|aws|mongo|memory] (default "memory")
 
     	Some providers take additional configuration via environment variables.
 
@@ -39,12 +39,12 @@ Usage of jb-sw-realm:
     	                     For example: {"tenantName":{"1":"tenantSecretKey"}}
 ```
 
-Compile the Juicebox Software Realm with `go build -o jb-sw-realm` or compile and run with `go run main.go`.
+Compile the Juicebox Software Realm with `go build ./cmd/jb-sw-realm` or compile and run with `go run ./cmd/jb-sw-realm/`.
 
 To quickly spin up a local realm for testing, you can run:
 
  ```sh
-TENANT_SECRETS='{"test":{"1":"an-auth-token-key"}}' jb-sw-realm -disable-tls -port 8080
+TENANT_SECRETS='{"test":{"1":"an-auth-token-key"}}' jb-sw-realm -port 8080
  ```
 
 ## Running a Realm
@@ -65,8 +65,8 @@ In general, regardless of provider, tenant secrets are stored in the following f
 
 ```json
 {
-	"jb-sw-tenant-{{yourTenantName}}": "{{yourSigningKey}}",
-	"jb-sw-tenant-acme": "acme-tenant-secret",
+	"jb-sw-tenant-{{yourTenantName}}" : {"{{keyVersion}}" : "{{yourSigningKey}}"},
+	"jb-sw-tenant-acme" : {"1" : "acme-tenant-secret"},
 }
 ```
 
@@ -169,7 +169,7 @@ https://console.aws.amazon.com/cloudfront
 
 ## Other Providers
 
-If you'd like to host a realm on another provider, or with a configuration other than the ones described above, you will need to choose a provider and manually configure your environent.
+If you'd like to host a realm on another provider, or with a configuration other than the ones described above, you will need to choose a provider and manually configure your environment.
 
 For your convenience, a Dockerfile is provided that can run a realm on most hosting platforms once properly configured.
 

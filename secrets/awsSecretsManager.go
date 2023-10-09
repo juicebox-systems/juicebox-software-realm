@@ -28,7 +28,6 @@ func NewAwsSecretsManager(ctx context.Context) (*AwsSecretsManager, error) {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
-
 	session, err := session.NewSession(&aws.Config{
 		Region: &region,
 	})

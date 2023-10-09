@@ -50,7 +50,7 @@ func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (*MongoS
 		return nil, err
 	}
 
-	databaseName := realmID.String()
+	databaseName := types.JuiceboxRealmDatabasePrefix + realmID.String()
 	if len(url.Path) > 1 {
 		databaseName = url.Path[1:]
 	}

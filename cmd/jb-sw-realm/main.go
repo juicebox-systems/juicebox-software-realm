@@ -115,7 +115,7 @@ memory:
 
 	ctx := context.Background()
 
-	tp := otel.InitTraceProvider(ctx, realmID)
+	tp := otel.InitTraceProvider(ctx, "jb-sw-realm", realmID)
 	defer func() {
 		if err := tp.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error shutting down tracer provider: %v", err)

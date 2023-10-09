@@ -31,3 +31,12 @@ type Recover3 struct {
 }
 
 type Delete struct{}
+
+type TenantLog struct {
+	Acks     []string `json:"acks"`
+	PageSize int16    `json:"page_size"`
+}
+
+type TenantLogAck struct {
+	Acks []string `json:"acks"`
+}
