@@ -38,11 +38,9 @@ func (c *memPubSub) Ack(_ context.Context, realm types.RealmID, tenant string, a
 	k := key(realm, tenant)
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	messages := c.events[k]
-	messages = slices.DeleteFunc(messages, func(m responses.TenantLogEntry) bool {
+	c.events[k] = slices.DeleteFunc(c.events[k], func(m responses.TenantLogEntry) bool {
 		return slices.Contains(acks, m.Ack)
 	})
-	c.events[k] = messages
 	return nil
 }
 
