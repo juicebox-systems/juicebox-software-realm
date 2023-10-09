@@ -1,1 +1,1 @@
-jb-sw-realm: go run main.go
+jb-sw-realm: go run ./cmd/jb-sw-realm
