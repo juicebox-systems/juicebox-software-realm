@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Executables
         run: |
-          go build -o jb-sw-realm .
+          go build ./cmd/jb-sw-realm
           go build ./cmd/tenant_log
 
       - name: Run go mod tidy
