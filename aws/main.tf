@@ -67,6 +67,31 @@ resource "aws_iam_policy" "secrets_manager_policy" {
     EOF
 }
 
+resource "aws_iam_policy" "sqs_policy" {
+  name = "jb-sw-realm-sqs-policy"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Action": [
+            "sqs:CreateQueue",
+            "sqs:TagQueue",
+            "sqs:GetQueueUrl",
+            "sqs:GetQueueAttributes",
+            "sqs:ReceiveMessage",
+            "sqs:SendMessage",
+            "sqs:DeleteMessage"
+        ],
+        "Resource": "*"
+        }
+    ]
+}
+    EOF
+}
+
 resource "aws_iam_role" "jb_sw_realm_role" {
   name               = "jb-sw-realm-role"
   assume_role_policy = <<EOF
@@ -96,6 +121,11 @@ resource "aws_iam_role_policy_attachment" "dynamodb_policy_attachment" {
   role       = aws_iam_role.jb_sw_realm_role.name
 }
 
+resource "aws_iam_role_policy_attachment" "sqs_policy_attachment" {
+  policy_arn = aws_iam_policy.sqs_policy.arn
+  role       = aws_iam_role.jb_sw_realm_role.name
+}
+
 resource "aws_iam_role_policy_attachment" "secrets_manager_policy_attachment" {
   for_each   = var.tenant_secrets
   policy_arn = aws_iam_policy.secrets_manager_policy[each.key].arn
@@ -115,7 +145,7 @@ resource "aws_elastic_beanstalk_application" "jb_sw_realm" {
 resource "aws_elastic_beanstalk_environment" "jb_sw_realm" {
   name                   = "jb-sw-realm"
   application            = aws_elastic_beanstalk_application.jb_sw_realm.name
-  solution_stack_name    = "64bit Amazon Linux 2 v3.7.5 running Go 1" # Go 1.20.6
+  solution_stack_name    = "64bit Amazon Linux 2 v3.8.1 running Go 1" # Go 1.21.2
   tier                   = "WebServer"
   wait_for_ready_timeout = "20m"
 
