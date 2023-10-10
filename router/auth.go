@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/juicebox-systems/juicebox-software-realm/records"
 	"github.com/juicebox-systems/juicebox-software-realm/secrets"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"github.com/labstack/echo/v4"
@@ -14,6 +15,18 @@ const requireScope = true
 const allowMissingScope = false
 const scopeUser = "user"
 const scopeAudit = "audit"
+
+func userRecordID(c echo.Context, realmID types.RealmID) (*records.UserRecordID, *claims, error) {
+	claims, err := verifyToken(c, realmID, allowMissingScope, scopeUser)
+	if err != nil {
+		return nil, nil, err
+	}
+	userRecordID, err := records.CreateUserRecordID(claims.Issuer, claims.Subject)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &userRecordID, claims, nil
+}
 
 func verifyToken(c echo.Context, realmID types.RealmID, scopeRequired bool, scope string) (*claims, error) {
 	token, ok := c.Get("user").(*jwt.Token)

@@ -124,18 +124,6 @@ func RunRouter(
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
-func userRecordID(c echo.Context, realmID types.RealmID) (*records.UserRecordID, *claims, error) {
-	claims, err := verifyToken(c, realmID, allowMissingScope, scopeUser)
-	if err != nil {
-		return nil, nil, err
-	}
-	userRecordID, err := records.CreateUserRecordID(claims.Issuer, claims.Subject)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &userRecordID, claims, nil
-}
-
 type appResult struct {
 	response      responses.SecretsResponse
 	updatedRecord *records.UserRecord
