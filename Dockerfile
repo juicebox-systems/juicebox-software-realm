@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o /jb-sw-realm
+RUN CGO_ENABLED=0 go build -o /jb-sw-realm ./cmd/jb-sw-realm
 
 FROM debian:11-slim
 

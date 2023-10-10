@@ -12,7 +12,6 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	grpccodes "google.golang.org/grpc/codes"
@@ -38,24 +37,18 @@ func NewBigtableRecordStore(ctx context.Context, realmID types.RealmID) (*Bigtab
 	projectID := os.Getenv("GCP_PROJECT_ID")
 	if projectID == "" {
 		err := errors.New("unexpectedly missing GCP_PROJECT_ID")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	instanceID := os.Getenv("BIGTABLE_INSTANCE_ID")
 	if instanceID == "" {
 		err := errors.New("unexpectedly missing BIGTABLE_INSTANCE_ID")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	admin, err := bigtable.NewAdminClient(ctx, projectID, instanceID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 	defer admin.Close()
 
@@ -70,17 +63,13 @@ func NewBigtableRecordStore(ctx context.Context, realmID types.RealmID) (*Bigtab
 
 	if err := admin.CreateTableFromConf(ctx, &config); err != nil {
 		if status.Code(err) != grpccodes.AlreadyExists {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
+			return nil, otel.RecordOutcome(err, span)
 		}
 	}
 
 	client, err := bigtable.NewClient(ctx, projectID, instanceID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	return &BigtableRecordStore{
@@ -108,9 +97,7 @@ func (bt BigtableRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	row, err := table.ReadRow(ctx, string(recordID))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, nil, err
+		return userRecord, nil, otel.RecordOutcome(err, span)
 	}
 
 	family, ok := row[familyName]
@@ -124,9 +111,7 @@ func (bt BigtableRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return userRecord, readRecord, err
+		return userRecord, readRecord, otel.RecordOutcome(err, span)
 	}
 
 	return userRecord, readRecord, nil
@@ -145,9 +130,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 
 	serializedUserRecord, err := cbor.Marshal(record)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
 
 	var newVersion uint64
@@ -159,9 +142,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 		readRecord, ok := readRecord.(bigtable.ReadItem)
 		if !ok {
 			err := errors.New("unexepected type for read record")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		// the "Column" field actually contains family:column
@@ -169,9 +150,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 
 		previousVersion, err := strconv.ParseUint(readColumnName, 10, 64)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return err
+			return otel.RecordOutcome(err, span)
 		}
 
 		newVersion = previousVersion + 1
@@ -207,9 +186,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 
 	err = table.Apply(ctx, string(recordID), conditionalMutation, opt)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
 
 	// if we had a previous column, we want the condition to be true
@@ -217,9 +194,7 @@ func (bt BigtableRecordStore) WriteRecord(ctx context.Context, recordID UserReco
 	desiredConditionalResult := previousColumnName != nil
 	if conditionalResult != desiredConditionalResult {
 		err := errors.New("failed to write to bigtable, record mutated since read")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
+		return otel.RecordOutcome(err, span)
 	}
 
 	return nil

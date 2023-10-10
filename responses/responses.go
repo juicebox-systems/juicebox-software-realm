@@ -1,6 +1,10 @@
 package responses
 
-import "github.com/juicebox-systems/juicebox-software-realm/types"
+import (
+	"time"
+
+	"github.com/juicebox-systems/juicebox-software-realm/types"
+)
 
 type Register1 struct{}
 
@@ -27,3 +31,19 @@ type Recover3 struct {
 }
 
 type Delete struct{}
+
+type TenantLog struct {
+	Events []TenantLogEntry `json:"events"`
+}
+
+type TenantLogEntry struct {
+	ID         string    `json:"id"`
+	Ack        string    `json:"ack"`
+	When       time.Time `json:"when"`
+	UserID     string    `json:"user_id"`
+	Event      string    `json:"event"`
+	NumGuesses *uint16   `json:"num_guesses,omitempty"`
+	GuessCount *uint16   `json:"guess_count,omitempty"`
+}
+
+type TenantLogAck struct{}

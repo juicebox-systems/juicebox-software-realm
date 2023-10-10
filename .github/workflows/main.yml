@@ -40,5 +40,10 @@ jobs:
       - name: Run go test
         run: go test -v ./...
 
+      - name: Build Executables
+        run: |
+          go build ./cmd/jb-sw-realm
+          go build ./cmd/tenant_log
+
       - name: Run go mod tidy
         run: go mod tidy && git diff --quiet

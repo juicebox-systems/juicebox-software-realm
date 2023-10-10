@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -38,19 +37,15 @@ func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (*MongoS
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
 		err := errors.New("unexpectedly missing MONGO_URL")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	url, err := url.Parse(urlString)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
-	databaseName := realmID.String()
+	databaseName := types.JuiceboxRealmDatabasePrefix + realmID.String()
 	if len(url.Path) > 1 {
 		databaseName = url.Path[1:]
 	}
@@ -58,9 +53,7 @@ func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (*MongoS
 	clientOptions := options.Client().ApplyURI(urlString)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	return &MongoSecretsManager{
@@ -87,17 +80,13 @@ func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, versio
 		bson.M{"_id": name, secretsVersionKey: version},
 	).Decode(&result)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	secret, ok := result[secretsSecretKey]
 	if !ok {
 		err := errors.New("secret unexpectedly missing 'secret' key")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	switch secret := secret.(type) {
@@ -108,7 +97,5 @@ func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, versio
 	}
 
 	err = errors.New("unexpected secret type")
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	return nil, err
+	return nil, otel.RecordOutcome(err, span)
 }

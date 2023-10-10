@@ -6,7 +6,6 @@ import (
 
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 )
 
 // RecordStore represents a generic interface into the
@@ -37,7 +36,5 @@ func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID ty
 	}
 
 	err := fmt.Errorf("unexpected provider %v", provider)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	return nil, err
+	return nil, otel.RecordOutcome(err, span)
 }

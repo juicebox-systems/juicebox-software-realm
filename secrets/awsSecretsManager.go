@@ -6,42 +6,32 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
-	"go.opentelemetry.io/otel/codes"
 )
 
 type AwsSecretsManager struct {
-	svc *secretsmanager.SecretsManager
+	svc *secretsmanager.Client
 }
 
 func NewAwsSecretsManager(ctx context.Context) (*AwsSecretsManager, error) {
-	_, span := otel.StartSpan(ctx, "NewAwsSecretsManager")
+	ctx, span := otel.StartSpan(ctx, "NewAwsSecretsManager")
 	defer span.End()
 
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
 		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
-	session, err := session.NewSession(&aws.Config{
-		Region: &region,
-	})
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
-
-	svc := secretsmanager.New(session)
 
 	return &AwsSecretsManager{
-		svc: svc,
+		svc: secretsmanager.NewFromConfig(cfg),
 	}, nil
 }
 
@@ -56,11 +46,9 @@ func (sm AwsSecretsManager) GetSecret(ctx context.Context, name string, version 
 		VersionStage: &versionString,
 	}
 
-	result, err := sm.svc.GetSecretValueWithContext(ctx, &input)
+	result, err := sm.svc.GetSecretValue(ctx, &input)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	if len(result.SecretBinary) > 0 {

@@ -8,6 +8,7 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -20,12 +21,25 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var tracerName = "jb-sw-realm"
+var metricsName = "jb-sw-realm"
+
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return otel.Tracer("jb-sw-realm").Start(ctx, name, opts...)
+	return otel.Tracer(tracerName).Start(ctx, name, opts...)
+}
+
+func RecordOutcome(err error, span trace.Span) error {
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	} else {
+		span.SetStatus(codes.Ok, "")
+	}
+	return err
 }
 
 func IncrementInt64Counter(ctx context.Context, name string, attributes ...attribute.KeyValue) error {
-	counter, err := otel.Meter("jb-sw-realm").Int64Counter(name)
+	counter, err := otel.Meter(metricsName).Int64Counter(name)
 	if err != nil {
 		return err
 	}
@@ -38,7 +52,7 @@ func initResource(realmID types.RealmID) *resource.Resource {
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("jb-sw-realm"),
+			semconv.ServiceName(tracerName),
 			attribute.String("realm", realmID.String()),
 		),
 	)
@@ -48,9 +62,10 @@ func initResource(realmID types.RealmID) *resource.Resource {
 	return resource
 }
 
-func InitTraceProvider(ctx context.Context, realmID types.RealmID) *sdktrace.TracerProvider {
-	resource := initResource(realmID)
+func InitTraceProvider(ctx context.Context, serviceName string, realmID types.RealmID) *sdktrace.TracerProvider {
+	tracerName = serviceName
 
+	resource := initResource(realmID)
 	opts := []sdktrace.TracerProviderOption{
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithResource(resource),
@@ -74,9 +89,10 @@ func InitTraceProvider(ctx context.Context, realmID types.RealmID) *sdktrace.Tra
 	return tp
 }
 
-func InitMeterProvider(ctx context.Context, realmID types.RealmID) *sdkmetric.MeterProvider {
-	resource := initResource(realmID)
+func InitMeterProvider(ctx context.Context, serviceName string, realmID types.RealmID) *sdkmetric.MeterProvider {
+	metricsName = serviceName
 
+	resource := initResource(realmID)
 	opts := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
 	}

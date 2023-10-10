@@ -11,7 +11,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/codes"
 )
 
 // SecretsManager represents a generic interface into the
@@ -21,12 +20,16 @@ type SecretsManager interface {
 }
 
 func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) ([]byte, error) {
+	return GetJWTSigningKeyWithPrefix(ctx, sm, types.JuiceboxTenantSecretPrefix, token)
+}
+
+func GetJWTSigningKeyWithPrefix(ctx context.Context, sm SecretsManager, prefix string, token *jwt.Token) ([]byte, error) {
 	name, version, err := ParseKid(token)
 	if err != nil {
 		return nil, err
 	}
 
-	tenantSecretKey := types.JuiceboxTenantSecretPrefix + *name
+	tenantSecretKey := prefix + *name
 
 	key, err := sm.GetSecret(ctx, tenantSecretKey, *version)
 	if err != nil {
@@ -83,7 +86,5 @@ func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID
 	}
 
 	err := fmt.Errorf("unexpected provider %v", provider)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
-	return nil, err
+	return nil, otel.RecordOutcome(err, span)
 }

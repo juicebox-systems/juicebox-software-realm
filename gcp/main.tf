@@ -14,6 +14,11 @@ resource "google_project_service" "secrets_manager" {
   service = "secretmanager.googleapis.com"
 }
 
+resource "google_project_service" "pub_sub" {
+  project = var.project_id
+  service = "pubsub.googleapis.com"
+}
+
 # Create app engine service account
 resource "google_service_account" "service_account" {
   account_id   = "jb-sw-realms"
@@ -96,6 +101,29 @@ resource "google_project_iam_binding" "logs_writer_binding" {
 resource "google_project_iam_binding" "storage_object_viewer_binding" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
+  members = [
+    "serviceAccount:${google_service_account.service_account.email}"
+  ]
+}
+
+# Define a custom role with the specific pub/sub perms needed.
+resource "google_project_iam_custom_role" "pubsub_role" {
+  project     = var.project_id
+  role_id     = "pubsub_role"
+  title       = "Role for managing pub/sub from a software realm"
+  description = "Role for managing pub/sub from a software realm"
+  permissions = ["pubsub.subscriptions.create",
+    "pubsub.topics.attachSubscription",
+    "pubsub.topics.create",
+    "pubsub.topics.publish",
+    "pubsub.subscriptions.consume",
+  ]
+}
+
+# Grant pub/sub access to the service account
+resource "google_project_iam_binding" "pubsub_binding" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.pubsub_role.name
   members = [
     "serviceAccount:${google_service_account.service_account.email}"
   ]
