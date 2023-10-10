@@ -22,6 +22,7 @@ import (
 )
 
 var tracerName = "jb-sw-realm"
+var metricsName = "jb-sw-realm"
 
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	return otel.Tracer(tracerName).Start(ctx, name, opts...)
@@ -38,7 +39,7 @@ func RecordOutcome(err error, span trace.Span) error {
 }
 
 func IncrementInt64Counter(ctx context.Context, name string, attributes ...attribute.KeyValue) error {
-	counter, err := otel.Meter(tracerName).Int64Counter(name)
+	counter, err := otel.Meter(metricsName).Int64Counter(name)
 	if err != nil {
 		return err
 	}
@@ -88,9 +89,10 @@ func InitTraceProvider(ctx context.Context, serviceName string, realmID types.Re
 	return tp
 }
 
-func InitMeterProvider(ctx context.Context, realmID types.RealmID) *sdkmetric.MeterProvider {
-	resource := initResource(realmID)
+func InitMeterProvider(ctx context.Context, serviceName string, realmID types.RealmID) *sdkmetric.MeterProvider {
+	metricsName = serviceName
 
+	resource := initResource(realmID)
 	opts := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
 	}

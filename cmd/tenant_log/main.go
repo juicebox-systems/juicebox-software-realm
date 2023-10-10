@@ -60,7 +60,7 @@ func main() {
 		}
 	}()
 
-	mp := otel.InitMeterProvider(ctx, realmID)
+	mp := otel.InitMeterProvider(ctx, "tenant-log", realmID)
 	defer func() {
 		if err := mp.Shutdown(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error shutting down meter provider: %v\n", err)
