@@ -98,10 +98,10 @@ REALM_ID = "99b2da84-b707-6203-dc35-804bbbcb8cba"
 SERVICE_ACCOUNT = "jb-sw-realms@your-project-id.iam.gserviceaccount.com"
 ```
 
-Open the `app.yaml` in this directory and configure it with these values where appropriate, for example:
+Open the `cmd/jb-sw-realm/app.yaml` file and configure it with these values where appropriate, for example:
 Replace `{{YOUR_BIGTABLE_INSTANCE_ID}}` with `jb-sw-realms`.
 
-Finally, you can deploy the realm software by running the following command from the root of the repo:
+Finally, you can deploy the realm software by running the following command from the `cmd/jb-sw-realm` directory of the repo:
 ```sh
 gcloud app deploy --project {{YOUR_GCP_PROJECT_ID}}
 ```
