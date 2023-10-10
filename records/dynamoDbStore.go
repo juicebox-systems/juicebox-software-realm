@@ -92,9 +92,13 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 		return userRecord, nil, otel.RecordOutcome(err, span)
 	}
 
-	serializedUserRecord := attributeValue.(*ddbTypes.AttributeValueMemberB).Value
+	binaryValue, ok := attributeValue.(*ddbTypes.AttributeValueMemberB)
+	if !ok {
+		err := errors.New("record should have a binary value but does not")
+		return userRecord, nil, otel.RecordOutcome(err, span)
+	}
 
-	err = cbor.Unmarshal(serializedUserRecord, &userRecord)
+	err = cbor.Unmarshal(binaryValue.Value, &userRecord)
 	if err != nil {
 		return userRecord, result.Item, otel.RecordOutcome(err, span)
 	}
