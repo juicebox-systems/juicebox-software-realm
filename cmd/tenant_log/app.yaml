@@ -1,0 +1,18 @@
+runtime: go
+env: flex
+service_account: tenant-log@juicebox-mmvp.iam.gserviceaccount.com
+
+runtime_config:
+    operating_system: ubuntu22
+    runtime_version: "1.21"
+
+liveness_check:
+  path: "/"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+env_variables:
+  GCP_PROJECT_ID: juicebox-mmvp
+  REALM_ID: 44e18495c18a3c459954d73d2689e839
