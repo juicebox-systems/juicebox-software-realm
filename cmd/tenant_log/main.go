@@ -41,13 +41,17 @@ func main() {
 	if *port == 0 {
 		*port = 8080
 	}
+	// if no id was provided, check if the REALM_ID env
+	if envIDString := os.Getenv("REALM_ID"); envIDString != "" && *idString == "" {
+		*idString = envIDString
+	}
 	parsedID, err := hex.DecodeString(*idString)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n%s, exiting...\n", err)
 		os.Exit(2)
 	}
 	if len(parsedID) != 16 {
-		fmt.Fprintf(os.Stderr, "\nInvalid id length %d, exiting...\n", len(parsedID))
+		fmt.Fprintf(os.Stderr, "\nInvalid realm id length %d, exiting...\n", len(parsedID))
 		os.Exit(3)
 	}
 	realmID := types.RealmID(parsedID)

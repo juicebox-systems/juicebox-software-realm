@@ -36,7 +36,9 @@ func NewTenantAPIServer(
 	e.Use(otelecho.Middleware("echo-router"))
 
 	AddTenantLogHandlers(e, realmID, pubSub, secretsManager, "tenant-")
-
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID.String()})
+	})
 	return e
 }
 
