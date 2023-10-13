@@ -67,6 +67,7 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 
 	userRecord := DefaultUserRecord()
 
+	consistentRead := true
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(db.tableName),
 		Key: map[string]ddbTypes.AttributeValue{
@@ -74,6 +75,7 @@ func (db DynamoDbRecordStore) GetRecord(ctx context.Context, recordID UserRecord
 				Value: string(recordID),
 			},
 		},
+		ConsistentRead: &consistentRead,
 	}
 
 	result, err := db.svc.GetItem(ctx, input)
