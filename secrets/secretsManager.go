@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
@@ -74,17 +76,83 @@ func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID
 	ctx, span := otel.StartSpan(ctx, "NewSecretsManager")
 	defer span.End()
 
+	var err error
+	var sm SecretsManager
 	switch provider {
 	case types.GCP:
-		return NewGcpSecretsManager(ctx)
+		sm, err = NewGcpSecretsManager(ctx)
 	case types.Memory:
-		return NewMemorySecretsManager(ctx)
+		sm, err = NewMemorySecretsManager(ctx)
 	case types.AWS:
-		return NewAwsSecretsManager(ctx)
+		sm, err = NewAwsSecretsManager(ctx)
 	case types.Mongo:
-		return NewMongoSecretsManager(ctx, realmID)
+		sm, err = NewMongoSecretsManager(ctx, realmID)
+	default:
+		err = fmt.Errorf("unexpected provider %v", provider)
 	}
+	if err != nil {
+		return nil, otel.RecordOutcome(err, span)
+	}
+	return newCachingSecretsManager(sm), nil
+}
 
-	err := fmt.Errorf("unexpected provider %v", provider)
-	return nil, otel.RecordOutcome(err, span)
+type cachingSecretsManager struct {
+	inner SecretsManager
+	lock  sync.Mutex
+	cache map[cacheKey][]byte
+}
+
+func newCachingSecretsManager(inner SecretsManager) SecretsManager {
+	return &cachingSecretsManager{
+		inner: inner,
+		cache: make(map[cacheKey][]byte),
+	}
+}
+
+func (c *cachingSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+	key := cacheKey{
+		name:    name,
+		version: version,
+	}
+	secret, ok := c.getCached(key)
+	if ok {
+		return secret, nil
+	}
+	secret, err := c.inner.GetSecret(ctx, name, version)
+	if err != nil {
+		return nil, err
+	}
+	c.addToCache(key, secret)
+	return secret, nil
+}
+
+func (c *cachingSecretsManager) addToCache(key cacheKey, secret []byte) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, exists := c.cache[key]
+	c.cache[key] = secret
+	if !exists {
+		go func() {
+			time.Sleep(time.Second * 60 * 60)
+			c.expire(key)
+		}()
+	}
+}
+
+func (c *cachingSecretsManager) getCached(k cacheKey) ([]byte, bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	secret, ok := c.cache[k]
+	return secret, ok
+}
+
+func (c *cachingSecretsManager) expire(key cacheKey) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	delete(c.cache, key)
+}
+
+type cacheKey struct {
+	name    string
+	version uint64
 }
