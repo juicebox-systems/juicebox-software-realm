@@ -27,10 +27,10 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY --from=build-env /jb-sw-realm /usr/local/bin/jb-sw-realm
 
-ENV PORT ${PORT:-8080}
+ENV PORT 8080
 
-EXPOSE $PORT
+EXPOSE 8080
 
-HEALTHCHECK CMD curl --fail "http://localhost:${PORT}" || exit 1
+HEALTHCHECK CMD curl --fail "http://localhost:8080" || exit 1
 
 ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
