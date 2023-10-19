@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -22,7 +23,9 @@ import (
 )
 
 type sqsClient struct {
-	client *sqs.Client
+	client    *sqs.Client
+	lock      sync.Mutex
+	queueURLs map[string]string
 }
 
 func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
@@ -46,7 +49,10 @@ func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 		return nil, msgType, otel.RecordOutcome(err, span)
 	}
 	client := sqs.NewFromConfig(cfg)
-	return &sqsClient{client: client}, msgType, nil
+	return &sqsClient{
+		client:    client,
+		queueURLs: make(map[string]string),
+	}, msgType, nil
 }
 
 func (s *sqsClient) Ack(ctx context.Context, realmID types.RealmID, tenant string, ids []string) error {
@@ -135,6 +141,10 @@ func (s *sqsClient) Pull(ctx context.Context, realmID types.RealmID, tenant stri
 
 func (s *sqsClient) queueURL(ctx context.Context, realmID types.RealmID, tenant string) (string, error) {
 	qn := fmt.Sprintf("tenant-%s-%s", tenant, realmID)
+	cached, ok := s.cachedQueueURL(qn)
+	if ok {
+		return cached, nil
+	}
 	url, err := s.client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{QueueName: &qn})
 	if err != nil {
 		var qne *sqsTypes.QueueDoesNotExist
@@ -152,9 +162,24 @@ func (s *sqsClient) queueURL(ctx context.Context, realmID types.RealmID, tenant 
 			if err != nil {
 				return "", err
 			}
+			s.addQueueURL(qn, *url.QueueUrl)
 			return *res.QueueUrl, nil
 		}
 		return "", err
 	}
+	s.addQueueURL(qn, *url.QueueUrl)
 	return *url.QueueUrl, nil
+}
+
+func (s *sqsClient) cachedQueueURL(qn string) (string, bool) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	cached, ok := s.queueURLs[qn]
+	return cached, ok
+}
+
+func (s *sqsClient) addQueueURL(qn string, url string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.queueURLs[qn] = url
 }
