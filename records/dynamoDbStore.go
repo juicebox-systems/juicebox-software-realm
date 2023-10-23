@@ -46,6 +46,7 @@ func NewDynamoDbRecordStore(ctx context.Context, realmID types.RealmID) (*Dynamo
 	if err != nil {
 		return nil, otel.RecordOutcome(err, span)
 	}
+	cfg.ClientLogMode |= aws.LogRetries
 
 	svc := dynamodb.NewFromConfig(cfg)
 	tableName := types.JuiceboxRealmDatabasePrefix + realmID.String()
