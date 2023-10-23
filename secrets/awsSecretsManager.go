@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
@@ -29,6 +30,7 @@ func NewAwsSecretsManager(ctx context.Context) (*AwsSecretsManager, error) {
 	if err != nil {
 		return nil, otel.RecordOutcome(err, span)
 	}
+	cfg.ClientLogMode |= aws.LogRetries
 
 	return &AwsSecretsManager{
 		svc: secretsmanager.NewFromConfig(cfg),

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -48,6 +49,7 @@ func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 	if err != nil {
 		return nil, msgType, otel.RecordOutcome(err, span)
 	}
+	cfg.ClientLogMode |= aws.LogRetries
 	client := sqs.NewFromConfig(cfg)
 	return &sqsClient{
 		client:    client,
