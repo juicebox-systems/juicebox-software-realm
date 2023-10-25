@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
@@ -20,7 +21,7 @@ type PubSub interface {
 	Pull(ctx context.Context, realm types.RealmID, tenant string, maxRows uint16) ([]responses.TenantLogEntry, error)
 }
 
-func NewPubSub(ctx context.Context, provider types.ProviderName, realmID types.RealmID) (PubSub, error) {
+func NewPubSub(ctx context.Context, provider types.ProviderName, opts types.ProviderOptions, realmID types.RealmID) (PubSub, error) {
 	ctx, span := otel.StartSpan(ctx, "NewPubSub")
 	defer span.End()
 
@@ -33,7 +34,7 @@ func NewPubSub(ctx context.Context, provider types.ProviderName, realmID types.R
 	case types.Memory:
 		ps, msgType = newMemPubSub()
 	case types.AWS:
-		ps, msgType, err = newSqsPubSub(ctx)
+		ps, msgType, err = newSqsPubSub(ctx, opts.Config.(aws.Config))
 	case types.Mongo:
 		ps, msgType, err = newMongoPubSub(ctx, realmID)
 	default:

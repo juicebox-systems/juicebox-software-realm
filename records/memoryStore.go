@@ -3,17 +3,25 @@ package records
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var memoryRecords = map[UserRecordID]UserRecord{}
+type MemoryRecordStore struct {
+	lock    sync.Mutex
+	records map[UserRecordID]UserRecord
+}
 
-type MemoryRecordStore struct{}
+func NewMemoryRecordStore() RecordStore {
+	return &MemoryRecordStore{
+		records: make(map[UserRecordID]UserRecord),
+	}
+}
 
-func (m MemoryRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
+func (m *MemoryRecordStore) GetRecord(ctx context.Context, recordID UserRecordID) (UserRecord, interface{}, error) {
 	_, span := otel.StartSpan(
 		ctx,
 		"GetRecord",
@@ -22,14 +30,17 @@ func (m MemoryRecordStore) GetRecord(ctx context.Context, recordID UserRecordID)
 	)
 	defer span.End()
 
-	record, ok := memoryRecords[recordID]
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	record, ok := m.records[recordID]
 	if !ok {
 		return DefaultUserRecord(), nil, nil
 	}
 	return record, record, nil
 }
 
-func (m MemoryRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
+func (m *MemoryRecordStore) WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error {
 	_, span := otel.StartSpan(
 		ctx,
 		"WriteRecord",
@@ -38,9 +49,12 @@ func (m MemoryRecordStore) WriteRecord(ctx context.Context, recordID UserRecordI
 	)
 	defer span.End()
 
-	existingRecord, exists := memoryRecords[recordID]
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	existingRecord, exists := m.records[recordID]
 	if !exists && readRecord == nil || existingRecord == readRecord {
-		memoryRecords[recordID] = record
+		m.records[recordID] = record
 		return nil
 	}
 

@@ -17,6 +17,10 @@ const (
 	Memory
 )
 
+type ProviderOptions struct {
+	Config interface{}
+}
+
 type RealmID [16]byte
 
 func (id RealmID) String() string {

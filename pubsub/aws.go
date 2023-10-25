@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
@@ -29,9 +27,9 @@ type sqsClient struct {
 	queueURLs map[string]string
 }
 
-func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
+func newSqsPubSub(ctx context.Context, cfg aws.Config) (PubSub, attribute.KeyValue, error) {
 	msgType := semconv.MessagingSystemKey.String("SQS")
-	ctx, span := otel.StartSpan(
+	_, span := otel.StartSpan(
 		ctx,
 		"newSqsPubSub",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -39,17 +37,6 @@ func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 	)
 	defer span.End()
 
-	region := os.Getenv("AWS_REGION_NAME")
-	if region == "" {
-		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		return nil, msgType, otel.RecordOutcome(err, span)
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return nil, msgType, otel.RecordOutcome(err, span)
-	}
-	cfg.ClientLogMode |= aws.LogRetries
 	client := sqs.NewFromConfig(cfg)
 	return &sqsClient{
 		client:    client,

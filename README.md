@@ -188,6 +188,13 @@ The available configuration variables, beyond the args on the `jb-sw-realm` bina
 
 If you want to gather metrics and tracing information from your realm, it is configured to report to a GRPC server at `OPENTELEMETRY_ENDPOINT`. The `Dockerfile` in this repo is configured to launch `jb-sw-realm` alongside an Open Telemetry Collector, which is one way you can gather this info. You can edit the `otel-collector-config.yml` to customize the export settings to your liking – by default, it expects a `DD_API_KEY` and `DD_SITE` environment variable to export to Datadog.
 
+If you are using the Dockerized version in AWS ensure that the "Disable IMDSv1"
+option is checked in the configuration. Otherwise the process inside the docker
+container does not have access to IMDSv2 and renewing access tokens will be slow
+while it times out IMDSv2 and falls back to IMDSv1. Checking the "Disable IMDSv1"
+option will cause EC2 instance to have the metadata hop limit set to 2, allowing
+access to the metadata service from within the docker container.
+
 ### GCP
 
 To deploy to App Engine Flex with tracing enabled, you can deploy a docker image instead of allowing Google to build an image for you. You will need to set up a repository in Artifact Registry to push your image to.

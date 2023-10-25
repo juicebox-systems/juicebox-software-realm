@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/fxamacker/cbor/v2"
@@ -27,7 +25,7 @@ const primaryKeyName string = "recordId"
 const userRecordAttributeName string = "serializedUserRecord"
 const versionAttributeName string = "version"
 
-func NewDynamoDbRecordStore(ctx context.Context, realmID types.RealmID) (*DynamoDbRecordStore, error) {
+func NewDynamoDbRecordStore(ctx context.Context, cfg aws.Config, realmID types.RealmID) (*DynamoDbRecordStore, error) {
 	_, span := otel.StartSpan(
 		ctx,
 		"NewDynamoDbRecordStore",
@@ -35,18 +33,6 @@ func NewDynamoDbRecordStore(ctx context.Context, realmID types.RealmID) (*Dynamo
 		trace.WithAttributes(semconv.DBSystemDynamoDB),
 	)
 	defer span.End()
-
-	region := os.Getenv("AWS_REGION_NAME")
-	if region == "" {
-		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		return nil, otel.RecordOutcome(err, span)
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return nil, otel.RecordOutcome(err, span)
-	}
-	cfg.ClientLogMode |= aws.LogRetries
 
 	svc := dynamodb.NewFromConfig(cfg)
 	tableName := types.JuiceboxRealmDatabasePrefix + realmID.String()

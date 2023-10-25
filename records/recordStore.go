@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 )
@@ -20,7 +21,7 @@ type RecordStore interface {
 	WriteRecord(ctx context.Context, recordID UserRecordID, record UserRecord, readRecord interface{}) error
 }
 
-func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID types.RealmID) (RecordStore, error) {
+func NewRecordStore(ctx context.Context, provider types.ProviderName, opts types.ProviderOptions, realmID types.RealmID) (RecordStore, error) {
 	ctx, span := otel.StartSpan(ctx, "NewRecordStore")
 	defer span.End()
 
@@ -28,9 +29,9 @@ func NewRecordStore(ctx context.Context, provider types.ProviderName, realmID ty
 	case types.GCP:
 		return NewBigtableRecordStore(ctx, realmID)
 	case types.Memory:
-		return MemoryRecordStore{}, nil
+		return NewMemoryRecordStore(), nil
 	case types.AWS:
-		return NewDynamoDbRecordStore(ctx, realmID)
+		return NewDynamoDbRecordStore(ctx, opts.Config.(aws.Config), realmID)
 	case types.Mongo:
 		return NewMongoRecordStore(ctx, realmID)
 	}
