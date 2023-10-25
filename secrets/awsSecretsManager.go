@@ -13,16 +13,16 @@ type AwsSecretsManager struct {
 	svc *secretsmanager.Client
 }
 
-func NewAwsSecretsManager(ctx context.Context, cfg aws.Config) (SecretsManager, error) {
+func NewAwsSecretsManager(ctx context.Context, cfg aws.Config) (*AwsSecretsManager, error) {
 	_, span := otel.StartSpan(ctx, "NewAwsSecretsManager")
 	defer span.End()
 
-	return newCachingSecretsManager(&AwsSecretsManager{
+	return &AwsSecretsManager{
 		svc: secretsmanager.NewFromConfig(cfg),
-	}), nil
+	}, nil
 }
 
-func (sm *AwsSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+func (sm AwsSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
 	ctx, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 

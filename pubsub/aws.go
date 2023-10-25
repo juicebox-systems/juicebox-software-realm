@@ -16,6 +16,7 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -26,7 +27,7 @@ type sqsClient struct {
 	queueURLs map[string]string
 }
 
-func NewSqsPubSub(ctx context.Context, cfg aws.Config) (PubSub, error) {
+func newSqsPubSub(ctx context.Context, cfg aws.Config) (PubSub, attribute.KeyValue, error) {
 	msgType := semconv.MessagingSystemKey.String("SQS")
 	_, span := otel.StartSpan(
 		ctx,
@@ -36,14 +37,11 @@ func NewSqsPubSub(ctx context.Context, cfg aws.Config) (PubSub, error) {
 	)
 	defer span.End()
 
-	inner := &sqsClient{
-		client:    sqs.NewFromConfig(cfg),
+	client := sqs.NewFromConfig(cfg)
+	return &sqsClient{
+		client:    client,
 		queueURLs: make(map[string]string),
-	}
-	return &spannedPubSub{
-		inner:   inner,
-		msgType: msgType,
-	}, nil
+	}, msgType, nil
 }
 
 func (s *sqsClient) Ack(ctx context.Context, realmID types.RealmID, tenant string, ids []string) error {

@@ -2,7 +2,9 @@ package pubsub
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
@@ -17,6 +19,31 @@ type PubSub interface {
 	// wait a reasonable (~30 seconds) amount of time to see if a new message
 	// turns up.
 	Pull(ctx context.Context, realm types.RealmID, tenant string, maxRows uint16) ([]responses.TenantLogEntry, error)
+}
+
+func NewPubSub(ctx context.Context, provider types.ProviderName, opts types.ProviderOptions, realmID types.RealmID) (PubSub, error) {
+	ctx, span := otel.StartSpan(ctx, "NewPubSub")
+	defer span.End()
+
+	var ps PubSub
+	var err error
+	var msgType attribute.KeyValue
+	switch provider {
+	case types.GCP:
+		ps, msgType, err = newGcpPubSub(ctx)
+	case types.Memory:
+		ps, msgType = newMemPubSub()
+	case types.AWS:
+		ps, msgType, err = newSqsPubSub(ctx, opts.Config.(aws.Config))
+	case types.Mongo:
+		ps, msgType, err = newMongoPubSub(ctx, realmID)
+	default:
+		err = fmt.Errorf("unexpected provider %v", provider)
+	}
+	if err != nil {
+		return nil, otel.RecordOutcome(err, span)
+	}
+	return &spannedPubSub{inner: ps, msgType: msgType}, nil
 }
 
 type EventMessage struct {

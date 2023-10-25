@@ -61,7 +61,7 @@ func NewMemorySecretsManagerWithPrefix(ctx context.Context, secretPrefix string)
 	}, nil
 }
 
-func (sm *MemorySecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+func (sm MemorySecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
 	_, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 

@@ -25,7 +25,7 @@ const secretsCollection string = "tenantSecrets"
 const secretsVersionKey string = "version"
 const secretsSecretKey string = "secret"
 
-func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (SecretsManager, error) {
+func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (*MongoSecretsManager, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"NewMongoSecretsManager",
@@ -56,13 +56,13 @@ func NewMongoSecretsManager(ctx context.Context, realmID types.RealmID) (Secrets
 		return nil, otel.RecordOutcome(err, span)
 	}
 
-	return newCachingSecretsManager(&MongoSecretsManager{
+	return &MongoSecretsManager{
 		client:       client,
 		databaseName: databaseName,
-	}), nil
+	}, nil
 }
 
-func (sm *MongoSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+func (sm MongoSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"GetSecret",

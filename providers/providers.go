@@ -46,14 +46,15 @@ func NewProvider(ctx context.Context, name types.ProviderName, realmID types.Rea
 
 	fmt.Printf("Realm ID: %s\n\n", realmID.String())
 
-	fmt.Print("Connecting to secrets manager...")
-
-	c, err := constructor(ctx, name)
+	options, err := newOptions(ctx, name)
 	if err != nil {
+		fmt.Printf("Failed to configure provider: %s\n", err)
 		return nil, otel.RecordOutcome(err, span)
 	}
 
-	secretsManager, err := c.NewSecretsManager(ctx, realmID)
+	fmt.Print("Connecting to secrets manager...")
+
+	secretsManager, err := secrets.NewSecretsManager(ctx, name, *options, realmID)
 	if err != nil {
 		fmt.Printf("\rFailed to connect to secrets manager: %s.\n", err)
 		return nil, otel.RecordOutcome(err, span)
@@ -63,7 +64,7 @@ func NewProvider(ctx context.Context, name types.ProviderName, realmID types.Rea
 
 	fmt.Print("Connecting to record store...")
 
-	recordStore, err := c.NewRecordStore(ctx, realmID)
+	recordStore, err := records.NewRecordStore(ctx, name, *options, realmID)
 	if err != nil {
 		fmt.Printf("\rFailed to connect to record store: %s.\n", err)
 		return nil, otel.RecordOutcome(err, span)
@@ -72,7 +73,7 @@ func NewProvider(ctx context.Context, name types.ProviderName, realmID types.Rea
 	fmt.Print("\rEstablished connection to record store.\n")
 
 	fmt.Print("Connecting to pub/sub...")
-	pubsub, err := c.NewPubSub(ctx, realmID)
+	pubsub, err := pubsub.NewPubSub(ctx, name, *options, realmID)
 	if err != nil {
 		fmt.Printf("\rFailed to connect to pubsub system: %s.\n", err)
 		return nil, otel.RecordOutcome(err, span)
@@ -87,32 +88,14 @@ func NewProvider(ctx context.Context, name types.ProviderName, realmID types.Rea
 	}, nil
 }
 
-func constructor(ctx context.Context, n types.ProviderName) (providerConstructor, error) {
-	switch n {
-	case types.GCP:
-		return &gcpProviderConstructor{}, nil
-	case types.AWS:
-		return newAwsProviderConstructor(ctx)
-	case types.Mongo:
-		return &mongoProviderConstructor{}, nil
-	case types.Memory:
-		return &memoryProviderConstructor{}, nil
-	default:
-		return nil, fmt.Errorf("unexpected ProviderName of %v", n)
+func newOptions(ctx context.Context, name types.ProviderName) (*types.ProviderOptions, error) {
+	if name == types.AWS {
+		return newAwsOptions(ctx)
 	}
+	return &types.ProviderOptions{}, nil
 }
 
-type providerConstructor interface {
-	NewSecretsManager(ctx context.Context, realm types.RealmID) (secrets.SecretsManager, error)
-	NewRecordStore(ctx context.Context, realm types.RealmID) (records.RecordStore, error)
-	NewPubSub(ctx context.Context, realm types.RealmID) (pubsub.PubSub, error)
-}
-
-type awsProviderConstructor struct {
-	config aws.Config
-}
-
-func newAwsProviderConstructor(ctx context.Context) (providerConstructor, error) {
+func newAwsOptions(ctx context.Context) (*types.ProviderOptions, error) {
 	region := os.Getenv("AWS_REGION_NAME")
 	if region == "" {
 		return nil, errors.New("unexpectedly missing AWS_REGION_NAME")
@@ -122,59 +105,5 @@ func newAwsProviderConstructor(ctx context.Context) (providerConstructor, error)
 		return nil, err
 	}
 	cfg.ClientLogMode |= aws.LogRetries
-	return &awsProviderConstructor{config: cfg}, nil
-}
-
-func (a *awsProviderConstructor) NewSecretsManager(ctx context.Context, _ types.RealmID) (secrets.SecretsManager, error) {
-	return secrets.NewAwsSecretsManager(ctx, a.config)
-}
-
-func (a *awsProviderConstructor) NewRecordStore(ctx context.Context, realm types.RealmID) (records.RecordStore, error) {
-	return records.NewDynamoDbRecordStore(ctx, a.config, realm)
-}
-
-func (a *awsProviderConstructor) NewPubSub(ctx context.Context, _ types.RealmID) (pubsub.PubSub, error) {
-	return pubsub.NewSqsPubSub(ctx, a.config)
-}
-
-type gcpProviderConstructor struct{}
-
-func (g *gcpProviderConstructor) NewSecretsManager(ctx context.Context, _ types.RealmID) (secrets.SecretsManager, error) {
-	return secrets.NewGcpSecretsManager(ctx)
-}
-
-func (g *gcpProviderConstructor) NewRecordStore(ctx context.Context, realm types.RealmID) (records.RecordStore, error) {
-	return records.NewBigtableRecordStore(ctx, realm)
-}
-
-func (g *gcpProviderConstructor) NewPubSub(ctx context.Context, _ types.RealmID) (pubsub.PubSub, error) {
-	return pubsub.NewGcpPubSub(ctx)
-}
-
-type mongoProviderConstructor struct{}
-
-func (c *mongoProviderConstructor) NewSecretsManager(ctx context.Context, realm types.RealmID) (secrets.SecretsManager, error) {
-	return secrets.NewMongoSecretsManager(ctx, realm)
-}
-
-func (c *mongoProviderConstructor) NewRecordStore(ctx context.Context, realm types.RealmID) (records.RecordStore, error) {
-	return records.NewMongoRecordStore(ctx, realm)
-}
-
-func (c *mongoProviderConstructor) NewPubSub(ctx context.Context, realm types.RealmID) (pubsub.PubSub, error) {
-	return pubsub.NewMongoPubSub(ctx, realm)
-}
-
-type memoryProviderConstructor struct{}
-
-func (c *memoryProviderConstructor) NewSecretsManager(ctx context.Context, _ types.RealmID) (secrets.SecretsManager, error) {
-	return secrets.NewMemorySecretsManager(ctx)
-}
-
-func (c *memoryProviderConstructor) NewRecordStore(_ context.Context, _ types.RealmID) (records.RecordStore, error) {
-	return records.NewMemoryRecordStore(), nil
-}
-
-func (c *memoryProviderConstructor) NewPubSub(_ context.Context, _ types.RealmID) (pubsub.PubSub, error) {
-	return pubsub.NewMemPubSub(), nil
+	return &types.ProviderOptions{Config: cfg}, nil
 }

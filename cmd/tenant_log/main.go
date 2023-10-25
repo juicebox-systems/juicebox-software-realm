@@ -76,7 +76,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error initializing secrets manager:  %v\n", err)
 		os.Exit(6)
 	}
-	pubSub, err := pubsub.NewGcpPubSub(ctx)
+	pubSub, err := pubsub.NewPubSub(ctx, types.GCP, types.ProviderOptions{}, realmID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing pub/sub connection: %v\n", err)
 		os.Exit(7)
