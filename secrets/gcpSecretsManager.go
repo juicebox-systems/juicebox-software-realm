@@ -15,7 +15,7 @@ type GcpSecretsManager struct {
 	projectID string
 }
 
-func NewGcpSecretsManager(ctx context.Context) (*GcpSecretsManager, error) {
+func NewGcpSecretsManager(ctx context.Context) (SecretsManager, error) {
 	ctx, span := otel.StartSpan(ctx, "NewGcpSecretsManager")
 	defer span.End()
 
@@ -30,17 +30,17 @@ func NewGcpSecretsManager(ctx context.Context) (*GcpSecretsManager, error) {
 		return nil, otel.RecordOutcome(err, span)
 	}
 
-	return &GcpSecretsManager{
+	return newCachingSecretsManager(&GcpSecretsManager{
 		client:    client,
 		projectID: projectID,
-	}, nil
+	}), nil
 }
 
-func (sm GcpSecretsManager) Close() {
+func (sm *GcpSecretsManager) Close() {
 	sm.client.Close()
 }
 
-func (sm GcpSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
+func (sm *GcpSecretsManager) GetSecret(ctx context.Context, name string, version uint64) ([]byte, error) {
 	ctx, span := otel.StartSpan(ctx, "GetSecret")
 	defer span.End()
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
@@ -20,14 +19,12 @@ type memPubSub struct {
 }
 
 func NewMemPubSub() PubSub {
-	ps, _ := newMemPubSub()
-	return ps
-}
-
-func newMemPubSub() (PubSub, attribute.KeyValue) {
-	return &memPubSub{
-		events: make(map[string][]responses.TenantLogEntry),
-	}, semconv.MessagingSystemKey.String("InMemory")
+	return &spannedPubSub{
+		inner: &memPubSub{
+			events: make(map[string][]responses.TenantLogEntry),
+		},
+		msgType: semconv.MessagingSystemKey.String("InMemory"),
+	}
 }
 
 func key(realm types.RealmID, tenant string) string {

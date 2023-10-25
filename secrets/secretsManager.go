@@ -3,7 +3,6 @@ package secrets
 import (
 	"context"
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
 )
 
@@ -70,30 +68,6 @@ func ParseKid(token *jwt.Token) (*string, *uint64, error) {
 	}
 
 	return &tenantName, &version, nil
-}
-
-func NewSecretsManager(ctx context.Context, provider types.ProviderName, realmID types.RealmID) (SecretsManager, error) {
-	ctx, span := otel.StartSpan(ctx, "NewSecretsManager")
-	defer span.End()
-
-	var err error
-	var sm SecretsManager
-	switch provider {
-	case types.GCP:
-		sm, err = NewGcpSecretsManager(ctx)
-	case types.Memory:
-		sm, err = NewMemorySecretsManager(ctx)
-	case types.AWS:
-		sm, err = NewAwsSecretsManager(ctx)
-	case types.Mongo:
-		sm, err = NewMongoSecretsManager(ctx, realmID)
-	default:
-		err = fmt.Errorf("unexpected provider %v", provider)
-	}
-	if err != nil {
-		return nil, otel.RecordOutcome(err, span)
-	}
-	return newCachingSecretsManager(sm), nil
 }
 
 type cachingSecretsManager struct {

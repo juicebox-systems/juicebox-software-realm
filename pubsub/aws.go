@@ -6,19 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	sqsTypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -29,9 +26,9 @@ type sqsClient struct {
 	queueURLs map[string]string
 }
 
-func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
+func NewSqsPubSub(ctx context.Context, cfg aws.Config) (PubSub, error) {
 	msgType := semconv.MessagingSystemKey.String("SQS")
-	ctx, span := otel.StartSpan(
+	_, span := otel.StartSpan(
 		ctx,
 		"newSqsPubSub",
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -39,22 +36,14 @@ func newSqsPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 	)
 	defer span.End()
 
-	region := os.Getenv("AWS_REGION_NAME")
-	if region == "" {
-		err := errors.New("unexpectedly missing AWS_REGION_NAME")
-		return nil, msgType, otel.RecordOutcome(err, span)
-	}
-
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		return nil, msgType, otel.RecordOutcome(err, span)
-	}
-	cfg.ClientLogMode |= aws.LogRetries
-	client := sqs.NewFromConfig(cfg)
-	return &sqsClient{
-		client:    client,
+	inner := &sqsClient{
+		client:    sqs.NewFromConfig(cfg),
 		queueURLs: make(map[string]string),
-	}, msgType, nil
+	}
+	return &spannedPubSub{
+		inner:   inner,
+		msgType: msgType,
+	}, nil
 }
 
 func (s *sqsClient) Ack(ctx context.Context, realmID types.RealmID, tenant string, ids []string) error {

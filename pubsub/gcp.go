@@ -13,7 +13,6 @@ import (
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
 	"github.com/juicebox-systems/juicebox-software-realm/responses"
 	"github.com/juicebox-systems/juicebox-software-realm/types"
-	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
@@ -28,7 +27,7 @@ type gcpPubSub struct {
 
 var msgType = semconv.MessagingSystemKey.String("GCP pub/sub")
 
-func newGcpPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
+func NewGcpPubSub(ctx context.Context) (PubSub, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"newGcpPubSub",
@@ -39,21 +38,25 @@ func newGcpPubSub(ctx context.Context) (PubSub, attribute.KeyValue, error) {
 
 	projectID := os.Getenv("GCP_PROJECT_ID")
 	if projectID == "" {
-		return nil, msgType, otel.RecordOutcome(errors.New("unexpectedly missing GCP_PROJECT_ID"), span)
+		return nil, otel.RecordOutcome(errors.New("unexpectedly missing GCP_PROJECT_ID"), span)
 	}
 	subClient, err := gcp_pubsub.NewSubscriberClient(ctx)
 	if err != nil {
-		return nil, msgType, otel.RecordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
 	pubClient, err := gcp_pubsub.NewPublisherClient(ctx)
 	if err != nil {
-		return nil, msgType, otel.RecordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
-	return &gcpPubSub{
+	inner := &gcpPubSub{
 		project:   projectID,
 		subClient: subClient,
 		pubClient: pubClient,
-	}, msgType, nil
+	}
+	return &spannedPubSub{
+		inner:   inner,
+		msgType: msgType,
+	}, nil
 }
 
 func (c *gcpPubSub) Ack(ctx context.Context, realm types.RealmID, tenant string, ids []string) error {

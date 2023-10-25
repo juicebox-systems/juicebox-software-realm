@@ -16,7 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,7 +27,7 @@ type mongoPubSub struct {
 	db     *mongo.Database
 }
 
-func newMongoPubSub(ctx context.Context, realmID types.RealmID) (PubSub, attribute.KeyValue, error) {
+func NewMongoPubSub(ctx context.Context, realmID types.RealmID) (PubSub, error) {
 	ctx, span := otel.StartSpan(
 		ctx,
 		"newMongoPubSub",
@@ -40,12 +39,12 @@ func newMongoPubSub(ctx context.Context, realmID types.RealmID) (PubSub, attribu
 	urlString := os.Getenv("MONGO_URL")
 	if urlString == "" {
 		err := errors.New("unexpectedly missing MONGO_URL")
-		return nil, semconv.DBSystemMongoDB, otel.RecordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	url, err := url.Parse(urlString)
 	if err != nil {
-		return nil, semconv.DBSystemMongoDB, otel.RecordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
 
 	databaseName := types.JuiceboxRealmDatabasePrefix + realmID.String()
@@ -59,14 +58,18 @@ func newMongoPubSub(ctx context.Context, realmID types.RealmID) (PubSub, attribu
 	clientOptions := options.Client().ApplyURI(urlString)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return nil, semconv.DBSystemMongoDB, otel.RecordOutcome(err, span)
+		return nil, otel.RecordOutcome(err, span)
 	}
 	database := client.Database(databaseName)
 
-	return &mongoPubSub{
+	inner := &mongoPubSub{
 		client: client,
 		db:     database,
-	}, semconv.DBSystemMongoDB, nil
+	}
+	return &spannedPubSub{
+		inner:   inner,
+		msgType: semconv.DBSystemMongoDB,
+	}, nil
 }
 
 func (m *mongoPubSub) Ack(ctx context.Context, _ types.RealmID, tenant string, ids []string) error {
