@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"strconv"
+	"time"
 
 	semver "github.com/Masterminds/semver/v3"
 	"github.com/fxamacker/cbor/v2"
@@ -45,6 +47,7 @@ func RunRouter(
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(otelecho.Middleware("echo-router"))
+	e.Use(timingHeader)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID.String()})
@@ -362,5 +365,16 @@ func contextAwareError(c echo.Context, code int, str string) error {
 		return c.String(499, "Client closed request")
 	default:
 		return c.String(code, str)
+	}
+}
+
+func timingHeader(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		start := time.Now()
+		c.Response().Before(func() {
+			nanos := time.Since(start).Nanoseconds()
+			c.Response().Header().Add("x-exec-time", strconv.FormatInt(nanos, 10))
+		})
+		return next(c)
 	}
 }
