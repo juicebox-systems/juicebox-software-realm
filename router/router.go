@@ -43,11 +43,11 @@ func RunRouter(
 	e := echo.New()
 	e.HideBanner = true
 
+	e.Use(timingHeader)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(otelecho.Middleware("echo-router"))
-	e.Use(timingHeader)
 
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{"realmID": realmID.String()})
