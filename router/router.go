@@ -42,6 +42,7 @@ func RunRouter(
 ) {
 	e := echo.New()
 	e.HideBanner = true
+	e.Server.IdleTimeout = 11 * 60 * time.Second
 
 	e.Use(timingHeader)
 	e.Use(middleware.Logger())
