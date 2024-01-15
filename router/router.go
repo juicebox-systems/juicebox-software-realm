@@ -42,6 +42,8 @@ func RunRouter(
 ) {
 	e := echo.New()
 	e.HideBanner = true
+	// This needs to be larger than the 650 second timeout set for NGINX in GCP.
+	e.Server.IdleTimeout = 11 * time.Minute
 
 	e.Use(timingHeader)
 	e.Use(middleware.Logger())
