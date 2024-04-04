@@ -3,9 +3,11 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/juicebox-systems/juicebox-software-realm/otel"
@@ -44,11 +46,17 @@ func NewTenantAPIServer(
 
 func AddTenantLogHandlers(e *echo.Echo, realmID types.RealmID, pubsub pubsub.PubSub, secretsManager secrets.SecretsManager, secretsPrefix string) {
 	jwtConfig := echojwt.Config{
-		KeyFunc: func(t *jwt.Token) (interface{}, error) {
-			return secrets.GetJWTSigningKeyWithPrefix(context.TODO(), secretsManager, secretsPrefix, t)
-		},
-		NewClaimsFunc: func(_ echo.Context) jwt.Claims {
-			return &claims{}
+		ParseTokenFunc: func(c echo.Context, auth string) (interface{}, error) {
+			token, err := jwt.ParseWithClaims(auth, &claims{}, func(t *jwt.Token) (interface{}, error) {
+				return secrets.GetJWTSigningKeyWithPrefix(c.Request().Context(), secretsManager, secretsPrefix, t)
+			}, jwt.WithLeeway(5*time.Second))
+			if err != nil {
+				return nil, &echojwt.TokenError{Token: token, Err: err}
+			}
+			if !token.Valid {
+				return nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token")}
+			}
+			return token, nil
 		},
 	}
 	e.POST("/tenant_log", func(c echo.Context) error {

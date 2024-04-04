@@ -1,7 +1,6 @@
 package router
 
 import (
-	"context"
 	cryptoRand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -116,11 +115,17 @@ func RunRouter(
 		return c.Blob(http.StatusOK, echo.MIMEOctetStream, serializedResponse)
 
 	}, middleware.BodyLimit("2K"), echojwt.WithConfig(echojwt.Config{
-		KeyFunc: func(t *jwt.Token) (interface{}, error) {
-			return secrets.GetJWTSigningKey(context.TODO(), provider.SecretsManager, t)
-		},
-		NewClaimsFunc: func(_ echo.Context) jwt.Claims {
-			return &claims{}
+		ParseTokenFunc: func(c echo.Context, auth string) (interface{}, error) {
+			token, err := jwt.ParseWithClaims(auth, &claims{}, func(t *jwt.Token) (interface{}, error) {
+				return secrets.GetJWTSigningKey(c.Request().Context(), provider.SecretsManager, t)
+			}, jwt.WithLeeway(5*time.Second))
+			if err != nil {
+				return nil, &echojwt.TokenError{Token: token, Err: err}
+			}
+			if !token.Valid {
+				return nil, &echojwt.TokenError{Token: token, Err: errors.New("invalid token")}
+			}
+			return token, nil
 		},
 	}))
 
