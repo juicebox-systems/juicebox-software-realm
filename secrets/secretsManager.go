@@ -2,6 +2,9 @@ package secrets
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -22,11 +25,11 @@ type SecretsManager interface {
 	GetSecret(ctx context.Context, name string, version uint64) ([]byte, error)
 }
 
-func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) ([]byte, error) {
+func GetJWTSigningKey(ctx context.Context, sm SecretsManager, token *jwt.Token) (interface{}, error) {
 	return GetJWTSigningKeyWithPrefix(ctx, sm, types.JuiceboxTenantSecretPrefix, token)
 }
 
-func GetJWTSigningKeyWithPrefix(ctx context.Context, sm SecretsManager, prefix string, token *jwt.Token) ([]byte, error) {
+func GetJWTSigningKeyWithPrefix(ctx context.Context, sm SecretsManager, prefix string, token *jwt.Token) (interface{}, error) {
 	name, version, err := ParseKid(token)
 	if err != nil {
 		return nil, err
@@ -39,7 +42,55 @@ func GetJWTSigningKeyWithPrefix(ctx context.Context, sm SecretsManager, prefix s
 		return nil, errors.New("no signing key for jwt")
 	}
 
-	return key, nil
+	authKey, err := ParseAuthKey(key, token.Method.Alg())
+	if err != nil {
+		return nil, err
+	}
+
+	return authKey, nil
+}
+
+func ParseAuthKey(key []byte, alg string) (interface{}, error) {
+	var authKeyJSON types.AuthKeyJSON
+	err := json.Unmarshal(key, &authKeyJSON)
+
+	if err != nil {
+		if alg != "HS256" {
+			return nil, fmt.Errorf("unexpected jwt signing method=%v", alg)
+		}
+		return key, nil
+	}
+
+	if !authKeyJSON.Algorithm.Matches(alg) {
+		return nil, fmt.Errorf("unexpected jwt signing method=%v", alg)
+	}
+
+	switch authKeyJSON.Encoding {
+	case types.Hex:
+		data, err := hex.DecodeString(authKeyJSON.Data)
+		if err != nil {
+			return nil, errors.New("invalid signing key hex")
+		}
+		switch authKeyJSON.Algorithm {
+		case types.HS256:
+			return data, nil
+		case types.EdDSA, types.RS256:
+			pubKey, err := x509.ParsePKIXPublicKey(data)
+			if err != nil {
+				return nil, errors.New("invalid public key")
+			}
+			return pubKey, nil
+		}
+	case types.UTF8:
+		switch authKeyJSON.Algorithm {
+		case types.HS256:
+			return []byte(authKeyJSON.Data), nil
+		default:
+			return nil, fmt.Errorf("utf8 encoding is not valid for this algorithm=%s", authKeyJSON.Algorithm)
+		}
+	}
+
+	return nil, fmt.Errorf("invalid signing key encoding=%s", authKeyJSON.Encoding)
 }
 
 func ParseKid(token *jwt.Token) (*string, *uint64, error) {

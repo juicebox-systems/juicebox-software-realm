@@ -47,7 +47,7 @@ func AddTenantLogHandlers(e *echo.Echo, realmID types.RealmID, pubsub pubsub.Pub
 		KeyFunc: func(t *jwt.Token) (interface{}, error) {
 			return secrets.GetJWTSigningKeyWithPrefix(context.TODO(), secretsManager, secretsPrefix, t)
 		},
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+		NewClaimsFunc: func(_ echo.Context) jwt.Claims {
 			return &claims{}
 		},
 	}

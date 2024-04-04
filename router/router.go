@@ -119,7 +119,7 @@ func RunRouter(
 		KeyFunc: func(t *jwt.Token) (interface{}, error) {
 			return secrets.GetJWTSigningKey(context.TODO(), provider.SecretsManager, t)
 		},
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+		NewClaimsFunc: func(_ echo.Context) jwt.Claims {
 			return &claims{}
 		},
 	}))

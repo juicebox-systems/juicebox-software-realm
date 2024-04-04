@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -51,6 +52,10 @@ type OprfProof struct {
 type UnlockKeyCommitment [32]byte
 type UnlockKeyTag [16]byte
 
+func (x UnlockKeyTag) ConstantTimeCompare(y UnlockKeyTag) int {
+	return subtle.ConstantTimeCompare(x[:], y[:])
+}
+
 type EncryptionKeyScalarShare [32]byte
 type EncryptedSecret [145]byte
 type EncryptedSecretCommitment [16]byte
@@ -59,8 +64,33 @@ type Policy struct {
 	NumGuesses uint16 `cbor:"num_guesses"`
 }
 
-func (x UnlockKeyTag) ConstantTimeCompare(y UnlockKeyTag) int {
-	return subtle.ConstantTimeCompare(x[:], y[:])
+type AuthKeyAlgorithm string
+
+const (
+	/// RSASSA-PKCS1-v1_5 using SHA-256
+	RS256 AuthKeyAlgorithm = "RsaPkcs1Sha256"
+	/// HMAC using SHA-256
+	HS256 AuthKeyAlgorithm = "HmacSha256"
+	/// Edwards-curve 25519 Digital Signature Algorithm
+	EdDSA AuthKeyAlgorithm = "Edwards25519"
+)
+
+func (aka AuthKeyAlgorithm) Matches(alg string) bool {
+	lowerAlg := strings.ToLower(alg)
+	return (aka == HS256 && lowerAlg == "hs256") || (aka == RS256 && lowerAlg == "rs256") || (aka == EdDSA && lowerAlg == "eddsa")
+}
+
+type AuthKeyDataEncoding string
+
+const (
+	Hex  AuthKeyDataEncoding = "Hex"
+	UTF8 AuthKeyDataEncoding = "UTF8"
+)
+
+type AuthKeyJSON struct {
+	Data      string              `json:"data"`
+	Encoding  AuthKeyDataEncoding `json:"encoding"`
+	Algorithm AuthKeyAlgorithm    `json:"algorithm"`
 }
 
 type HTTPError struct {
