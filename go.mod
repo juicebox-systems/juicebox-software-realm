@@ -1,6 +1,6 @@
 module github.com/juicebox-systems/juicebox-software-realm
 
-go 1.22.2
+go 1.22.6
 
 require (
 	cloud.google.com/go/bigtable v1.19.0
