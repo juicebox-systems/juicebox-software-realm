@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: cef0300fd0fc4d2a87a85fa2093c6b283ea36f4b # v5.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
@@ -8,7 +8,7 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: 2f8bda194a420ad77a050a9de627d77a74841fdc # v1.99.4
+    rev: d0e12caebb2ab0ee8bf98181c8bfe9702bca103d # v1.105.0
     hooks:
       - id: terraform_fmt
       - id: terraform_validate
